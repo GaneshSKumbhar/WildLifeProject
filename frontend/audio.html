@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bioacoustic — EcoSentinel</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
+</head>
+<body>
+    <div id="shell-root"></div>
+
+    <!-- Firebase CDN (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        (async function() {
+            var session = await WI.renderShell('audio', 'BIOACOUSTIC TELEMETRY');
+
+            document.getElementById('page-slot').innerHTML = `
+                <div class="page">
+                    <div class="page-head">
+                        <div class="eyebrow">MOD-04 — /predict_audio/ &middot; /audio_classes/</div>
+                        <h1>Bioacoustic Classification</h1>
+                        <p>Process audio recordings (vocalizations, forest soundscapes) to classify animal calls against the trained audio CNN model and save results to the cloud database.</p>
+                    </div>
+
+                    <div class="cols-2">
+                        <div class="card">
+                            <div class="card-head"><h3>Audio File Input</h3></div>
+                            <div class="card-body">
+                                <div class="dropzone" id="dz">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l10-2v13M6 20a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm10-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
+                                    <div class="dz-title">Ingest audio clip (click or drag &amp; drop)</div>
+                                    <div class="dz-sub">WAV &bull; MP3 &bull; OGG &bull; FLAC</div>
+                                    <input type="file" id="file-input" accept="audio/*">
+                                </div>
+                                <div class="filebar" id="filebar" style="display:none;">
+                                    <span id="filebar-name"></span>
+                                    <span class="clear" id="filebar-clear">remove</span>
+                                </div>
+                                <audio class="audio-player" id="audio-player" controls style="display:none;"></audio>
+
+                                <div style="margin-top:20px;">
+                                    <label class="mono" style="font-size:10px; color:var(--text-faint); text-transform:uppercase;">Monitoring Station / Recorder ID</label>
+                                    <input type="text" class="text-input mono" id="site-input" placeholder="e.g. REC-ZONE-02" style="margin-top:8px;">
+                                </div>
+
+                                <div style="margin-top:20px;">
+                                    <label class="mono" style="font-size:10px; color:var(--text-faint); text-transform:uppercase;">Analysis Mode</label>
+                                    <div style="display:flex; gap:10px; margin-top:8px;">
+                                        <button class="btn btn-ghost btn-block mode-btn active" data-mode="open" id="mode-open">Open Search</button>
+                                        <button class="btn btn-ghost btn-block mode-btn" data-mode="species" id="mode-species">Species Check</button>
+                                    </div>
+                                </div>
+
+                                <div id="species-picker" style="margin-top:14px; display:none;">
+                                    <label class="mono" style="font-size:9px; color:var(--text-faint); text-transform:uppercase; display:block; margin-bottom:8px;">Target Species to Detect</label>
+                                    <select id="species-select" class="mono"><option>Loading classes...</option></select>
+                                </div>
+
+                                <button class="btn btn-primary btn-block" id="run-audio" style="margin-top:20px;">
+                                    <span class="spinner"></span>
+                                    <span class="label">Run Classification</span>
+                                </button>
+                                <div class="error-banner" id="err"></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-head">
+                                <h3>Trained Species List</h3>
+                                <span class="count" id="species-count">—</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="species-grid" id="species-grid">
+                                    <span class="empty-state" style="padding:0; width:100%;">Loading species from server...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top:32px;">
+                        <div class="card-head">
+                            <h3>Classification Result</h3>
+                            <span class="count" id="result-status">NO CLIP ANALYZED</span>
+                        </div>
+                        <div class="card-body" id="results-body">
+                            <div class="empty-state">Results will display here after model analysis is triggered.</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            var currentFile = null;
+            var mode = 'open';
+            var lastResult = null;
+            var lastLabel = null;
+            var lastConf = null;
+
+            var dz = document.getElementById('dz');
+            var fileInput = document.getElementById('file-input');
+            var filebar = document.getElementById('filebar');
+            var filebarName = document.getElementById('filebar-name');
+            var audioPlayer = document.getElementById('audio-player');
+            var err = document.getElementById('err');
+            var resultsBody = document.getElementById('results-body');
+            var resultStatus = document.getElementById('result-status');
+            var runBtn = document.getElementById('run-audio');
+            var speciesPicker = document.getElementById('species-picker');
+            var speciesSelect = document.getElementById('species-select');
+            var speciesGrid = document.getElementById('species-grid');
+            var speciesCount = document.getElementById('species-count');
+
+            dz.addEventListener('click', function() { fileInput.click(); });
+            ['dragover','dragenter'].forEach(function(ev) { dz.addEventListener(ev, function(e) { e.preventDefault(); dz.classList.add('drag'); }); });
+            ['dragleave','drop'].forEach(function(ev) { dz.addEventListener(ev, function(e) { e.preventDefault(); dz.classList.remove('drag'); }); });
+            dz.addEventListener('drop', function(e) { if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+            fileInput.addEventListener('change', function(e) { if (e.target.files[0]) setFile(e.target.files[0]); });
+            document.getElementById('filebar-clear').addEventListener('click', function() { setFile(null); });
+
+            function setFile(file) {
+                currentFile = file;
+                WI.hideError(err);
+                if (!file) { filebar.style.display='none'; fileInput.value=''; audioPlayer.style.display='none'; audioPlayer.removeAttribute('src'); return; }
+                filebar.style.display = 'flex';
+                filebarName.textContent = file.name + ' · ' + (file.size/1024).toFixed(0) + ' KB';
+                audioPlayer.src = URL.createObjectURL(file);
+                audioPlayer.style.display = 'block';
+            }
+
+            document.querySelectorAll('.mode-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    mode = btn.getAttribute('data-mode');
+                    speciesPicker.style.display = mode === 'species' ? 'block' : 'none';
+                    runBtn.querySelector('.label').textContent = mode === 'species' ? 'Run Target Species Check' : 'Run Classification';
+                });
+            });
+
+            runBtn.addEventListener('click', async function() {
+                if (!currentFile) { WI.showError(err, 'Ingest an audio file first.'); return; }
+                if (mode === 'species' && (!speciesSelect.value || speciesSelect.disabled)) { WI.showError(err, 'Select a target species.'); return; }
+                setLoading(runBtn, true);
+                WI.hideError(err);
+                try {
+                    var fd = new FormData(); fd.append('file', currentFile);
+                    var endpoint = mode === 'species'
+                        ? WI.base() + '/predict_audio/species/' + encodeURIComponent(speciesSelect.value)
+                        : WI.base() + '/predict_audio/';
+                    var res = await fetch(endpoint, { method: 'POST', body: fd });
+                    if (!res.ok) throw new Error('API returned code ' + res.status);
+                    var data = await res.json();
+                    renderResult(data);
+                    WI.toast('Bioacoustic analysis complete');
+                } catch (e) {
+                    WI.showError(err, 'Inference Failed: ' + e.message);
+                } finally { setLoading(runBtn, false); }
+            });
+
+            function setLoading(btn, on) { btn.classList.toggle('loading', on); btn.disabled = on; }
+
+            function renderResult(data) {
+                lastResult = data;
+                resultsBody.innerHTML = '';
+                resultStatus.textContent = mode === 'species' ? 'TARGET: ' + speciesSelect.value.toUpperCase() : 'OPEN SEARCH';
+
+                lastLabel = data.predicted_class || data.class || data.label || data.species || (mode === 'species' ? speciesSelect.value : 'Result');
+                var confKey = Object.keys(data).find(function(k) { return /confidence|probability|score/i.test(k); });
+                lastConf = confKey != null ? (data[confKey] <= 1 ? data[confKey] * 100 : data[confKey]) : null;
+
+                // Resolve common name for display; keep scientific name in lastLabel for DB saves
+                var commonName  = WI.commonName(lastLabel);   // e.g. "Domestic Sheep"
+                var sciName     = lastLabel;                   // e.g. "Ovis Aries"
+                var nameChanged = commonName !== sciName;
+
+                var strip = document.createElement('div');
+                strip.className = 'headline-result';
+
+                if (mode === 'species') {
+                    var detected = data.detected;
+                    var hitColor = detected ? 'var(--accent-emerald)' : 'var(--accent-crimson)';
+                    var icon = detected
+                        ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="'+hitColor+'" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+                        : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="'+hitColor+'" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+                    strip.style.borderColor = detected ? 'rgba(74,222,128,0.4)' : 'rgba(248,113,113,0.4)';
+                    var targetCommon = WI.commonName(speciesSelect.value);
+                    var targetSci   = speciesSelect.value;
+                    strip.innerHTML =
+                        '<div class="badge" style="background:rgba(0,0,0,0.2);border-color:'+hitColor+'">' + icon + '</div>' +
+                        '<div>' +
+                          '<h4>' + targetCommon + '</h4>' +
+                          (targetCommon !== targetSci ? '<div style="font-size:11px;color:var(--text-faint);font-style:italic;margin-top:2px;">' + targetSci + '</div>' : '') +
+                          '<div class="sub" style="margin-top:6px;">' + (detected ? 'Species detected' : 'Species not detected') + (lastConf != null ? ' · Confidence: ' + lastConf.toFixed(1) + '%' : '') + '</div>' +
+                        '</div>';
+                } else {
+                    strip.innerHTML =
+                        '<div class="badge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="20" r="3"/><circle cx="16" cy="18" r="3"/></svg></div>' +
+                        '<div>' +
+                          '<h4>' + commonName + '</h4>' +
+                          (nameChanged ? '<div style="font-size:11px;color:var(--text-faint);font-style:italic;margin-top:2px;">' + sciName + '</div>' : '') +
+                          '<div class="sub" style="margin-top:6px;">Bioacoustic match' + (lastConf != null ? ' · Confidence: ' + lastConf.toFixed(1) + '%' : '') + '</div>' +
+                        '</div>';
+                }
+                resultsBody.appendChild(strip);
+                resultsBody.appendChild(WI.renderObjectCard(data));
+
+                // Save to Firestore button
+                var logBar = document.createElement('div');
+                logBar.style.marginTop = '20px';
+                logBar.innerHTML = '<button class="btn btn-primary btn-block" id="save-db-btn"><span class="spinner"></span><span class="label">Save to Cloud Database</span></button>';
+                resultsBody.appendChild(logBar);
+                document.getElementById('save-db-btn').addEventListener('click', saveToFirestore);
+            }
+
+            async function saveToFirestore() {
+                var btn = document.getElementById('save-db-btn');
+                setLoading(btn, true);
+                var site = document.getElementById('site-input').value.trim() || '';
+                var uid = session.user.uid;
+
+                try {
+                    var species = await FireDB.findOrCreateSpecies(lastLabel);
+
+                    var audioId = await FireDB.saveAudio({
+                        user_id: uid,
+                        audio_path: currentFile ? currentFile.name : '',
+                        species_id: species.id,
+                        species_name: lastLabel,
+                        confidence: lastConf || 0,
+                        duration: audioPlayer.duration || 0,
+                        site: site
+                    });
+
+                    await FireDB.savePopulation({
+                        species_id: species.id,
+                        species_name: lastLabel,
+                        image_id: null,
+                        audio_id: audioId,
+                        population_count: 1,
+                        location: site
+                    });
+
+                    WI.toast('Audio record saved to Firestore');
+                    btn.querySelector('.label').textContent = '✓ Saved to Database';
+                    btn.disabled = true;
+                } catch (e) {
+                    WI.toast('Database save failed: ' + e.message);
+                    console.error(e);
+                } finally { setLoading(btn, false); }
+            }
+
+            // Load species list from API
+            async function loadSpecies() {
+                speciesGrid.innerHTML = '<span class="empty-state" style="padding:0;width:100%;">Loading from API...</span>';
+                speciesSelect.innerHTML = '<option>Loading...</option>';
+                speciesSelect.disabled = true;
+                try {
+                    var res = await fetch(WI.base() + '/audio_classes/');
+                    if (!res.ok) throw new Error();
+                    var data = await res.json();
+                    var classes = Array.isArray(data) ? data : (data.classes || []);
+                    speciesCount.textContent = classes.length + ' CLASSES';
+                    if (classes.length === 0) { speciesGrid.innerHTML = '<span class="empty-state" style="padding:0;width:100%;">No classes defined.</span>'; return; }
+                    // Show common name prominently with scientific name as subtitle in each chip
+                    speciesGrid.innerHTML = classes.map(function(c) {
+                        var cn = WI.commonName(c);
+                        var hasCommon = cn !== c;
+                        return '<span class="species-chip" title="' + c + '">' +
+                                 (hasCommon
+                                   ? '<span style="display:block;font-weight:600;">' + cn + '</span>' +
+                                     '<span style="display:block;font-size:9px;opacity:0.55;font-style:italic;margin-top:2px;">' + c + '</span>'
+                                   : c) +
+                               '</span>';
+                    }).join('');
+                    // Dropdown shows "Common Name (Scientific)" but value stays scientific for API calls
+                    speciesSelect.innerHTML = classes.map(function(c) {
+                        var cn = WI.commonName(c);
+                        var label = cn !== c ? cn + '  (' + c + ')' : c;
+                        return '<option value="' + c + '">' + label + '</option>';
+                    }).join('');
+                    speciesSelect.disabled = false;
+                } catch (e) {
+                    speciesCount.textContent = '—';
+                    speciesGrid.innerHTML = '<span class="empty-state" style="padding:0;width:100%;color:var(--accent-crimson)">Offline: Could not connect to API.</span>';
+                }
+            }
+            loadSpecies();
+            window.addEventListener('wi:server-changed', loadSpecies);
+        })();
+    </script>
+</body>
+</html>

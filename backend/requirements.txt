@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+ultralytics
+Pillow
+tensorflow
+librosa
+scikit-learn
+soundfile

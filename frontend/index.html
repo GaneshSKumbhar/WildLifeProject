@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wildlife Population Intelligence System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,450;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --canopy-950: #0e1712;
+            --canopy-900: #132019;
+            --canopy-800: #1c2c22;
+            --canopy-700: #2a4131;
+            --moss: #5c7d54;
+            --moss-light: #9db892;
+            --paper: #ece5d3;
+            --paper-dim: #ddd3ba;
+            --ink: #20241d;
+            --amber: #c4802f;
+            --amber-soft: #e3ac66;
+            --slate: #54707a;
+            --line: rgba(32, 36, 29, 0.14);
+            --line-dark: rgba(236, 229, 211, 0.14);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--paper);
+            color: var(--ink);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        ::selection {
+            background: var(--amber-soft);
+            color: var(--canopy-950);
+        }
+
+        h1,
+        h2,
+        h3,
+        .display {
+            font-family: 'Fraunces', serif;
+        }
+
+        .mono {
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .wrap {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 0 32px;
+        }
+
+        /* ---------- Topographic texture ---------- */
+        .topo {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        /* ---------- Nav ---------- */
+        header.nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            background: rgba(14, 23, 18, 0.86);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--line-dark);
+        }
+
+        .nav-inner {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--paper);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-size: 18px;
+            letter-spacing: -0.01em;
+            color: #ece5d3;
+            text-decoration: none;
+            text-shadow: 0 0 20px rgba(227,172,102,0.2);
+        }
+
+        .brand img {
+            width: 30px;
+            height: 30px;
+        }
+
+        .brand .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--amber-soft);
+            box-shadow: 0 0 0 4px rgba(227, 172, 102, 0.18);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 12px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .nav-links a {
+            opacity: 0.65;
+            text-decoration: none;
+            transition: opacity .2s;
+            white-space: nowrap;
+        }
+
+        .nav-links a:hover {
+            opacity: 1;
+        }
+
+        .nav-divider {
+            width: 1px;
+            height: 16px;
+            background: rgba(236,229,211,0.2);
+        }
+
+        .nav-tag {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            opacity: 0.4;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+        }
+
+        @media (max-width:1050px) {
+            .nav-tag { display: none; }
+        }
+
+        @media (max-width:860px) {
+            .nav-links {
+                display: none;
+            }
+        }
+
+        /* ---------- Hero ---------- */
+        .hero {
+            position: relative;
+            background: radial-gradient(120% 100% at 15% 0%, #172519 0%, var(--canopy-950) 55%, #0a100c 100%);
+            color: var(--paper);
+            padding: 168px 0 120px;
+            overflow: hidden;
+        }
+
+        .hero .wrap {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--amber-soft);
+            border: 1px solid rgba(227, 172, 102, 0.35);
+            padding: 7px 14px;
+            border-radius: 100px;
+            margin-bottom: 34px;
+        }
+
+        .hero-kicker::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--amber-soft);
+        }
+
+        .hero h1 {
+            font-size: clamp(2.6rem, 5.6vw, 4.7rem);
+            font-weight: 600;
+            line-height: 1.03;
+            letter-spacing: -0.01em;
+            max-width: 900px;
+        }
+
+        .hero h1 em {
+            font-style: italic;
+            font-weight: 300;
+            color: var(--moss-light);
+        }
+
+        .hero-sub {
+            max-width: 620px;
+            margin-top: 26px;
+            font-size: 17px;
+            color: rgba(236, 229, 211, 0.72);
+            font-weight: 400;
+        }
+
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 38px;
+            margin-top: 56px;
+            padding-top: 32px;
+            border-top: 1px solid var(--line-dark);
+        }
+
+        .hero-meta div {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(236, 229, 211, 0.45);
+        }
+
+        .hero-meta strong {
+            display: block;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            text-transform: none;
+            letter-spacing: 0;
+            color: var(--paper);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        /* viewfinder frame decoration */
+        .viewfinder {
+            position: absolute;
+            top: 130px;
+            right: 6%;
+            width: 340px;
+            height: 420px;
+            z-index: 1;
+            opacity: 0.9;
+        }
+
+        .vf-corner {
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-color: var(--moss-light);
+            opacity: 0.55;
+        }
+
+        .vf-corner.tl {
+            top: 0;
+            left: 0;
+            border-top: 2px solid;
+            border-left: 2px solid;
+        }
+
+        .vf-corner.tr {
+            top: 0;
+            right: 0;
+            border-top: 2px solid;
+            border-right: 2px solid;
+        }
+
+        .vf-corner.bl {
+            bottom: 0;
+            left: 0;
+            border-bottom: 2px solid;
+            border-left: 2px solid;
+        }
+
+        .vf-corner.br {
+            bottom: 0;
+            right: 0;
+            border-bottom: 2px solid;
+            border-right: 2px solid;
+        }
+
+        .vf-tag {
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10.5px;
+            color: var(--amber-soft);
+            letter-spacing: 0.05em;
+        }
+
+        .vf-tag span {
+            display: block;
+            opacity: 0.6;
+            color: var(--moss-light);
+            margin-top: 3px;
+        }
+
+        @media (max-width:900px) {
+            .viewfinder {
+                display: none;
+            }
+        }
+
+        /* ---------- Section shell ---------- */
+        section {
+            padding: 100px 0;
+            position: relative;
+        }
+
+        .section-head {
+            max-width: 640px;
+            margin-bottom: 56px;
+        }
+
+        .eyebrow {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--moss);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .eyebrow::before {
+            content: '';
+            width: 22px;
+            height: 1px;
+            background: var(--moss);
+        }
+
+        .section-head h2 {
+            font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .section-head p {
+            margin-top: 16px;
+            color: rgba(32, 36, 29, 0.68);
+            font-size: 15.5px;
+            max-width: 560px;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(18px);
+            transition: opacity .7s ease, transform .7s ease;
+        }
+
+        .reveal.in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ---------- Objective ---------- */
+        .objective {
+            background: var(--paper);
+        }
+
+        .obj-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 64px;
+            align-items: start;
+        }
+
+        .obj-body p {
+            font-size: 16px;
+            color: rgba(32, 36, 29, 0.78);
+            margin-bottom: 18px;
+        }
+
+        .obj-body p strong {
+            color: var(--ink);
+            font-weight: 600;
+        }
+
+        .users-card {
+            background: var(--canopy-900);
+            color: var(--paper);
+            border-radius: 4px;
+            padding: 32px;
+            border: 1px solid var(--canopy-700);
+        }
+
+        .users-card h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--amber-soft);
+            font-family: 'IBM Plex Mono', monospace;
+            margin-bottom: 18px;
+        }
+
+        .users-card ul {
+            list-style: none;
+        }
+
+        .users-card li {
+            padding: 11px 0;
+            border-bottom: 1px solid var(--line-dark);
+            font-size: 14.5px;
+            color: rgba(236, 229, 211, 0.85);
+            display: flex;
+            gap: 10px;
+            align-items: baseline;
+        }
+
+        .users-card li:last-child {
+            border-bottom: none;
+        }
+
+        .users-card li::before {
+            content: '—';
+            color: var(--moss-light);
+            opacity: 0.7;
+        }
+
+        /* ---------- Modules (field log cards) ---------- */
+        .modules {
+            background: var(--paper-dim);
+        }
+
+        .mod-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1px;
+            background: var(--line);
+            border: 1px solid var(--line);
+        }
+
+        .mod-card {
+            background: var(--paper-dim);
+            padding: 30px 32px;
+            position: relative;
+        }
+
+        .mod-id {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--amber);
+            letter-spacing: 0.08em;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .mod-card h4 {
+            font-size: 18px;
+            font-weight: 600;
+            font-family: 'Fraunces', serif;
+            margin-bottom: 10px;
+        }
+
+        .mod-card ul {
+            list-style: none;
+            font-size: 13.5px;
+            color: rgba(32, 36, 29, 0.68);
+        }
+
+        .mod-card li {
+            padding: 4px 0;
+            display: flex;
+            gap: 8px;
+        }
+
+        .mod-card li::before {
+            content: '▹';
+            color: var(--moss);
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        @media (max-width:760px) {
+            .mod-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ---------- Architecture ---------- */
+        .arch {
+            background: var(--canopy-950);
+            color: var(--paper);
+        }
+
+        .arch .eyebrow {
+            color: var(--amber-soft);
+        }
+
+        .arch .eyebrow::before {
+            background: var(--amber-soft);
+        }
+
+        .arch .section-head p {
+            color: rgba(236, 229, 211, 0.62);
+        }
+
+        .layer-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            border: 1px solid var(--line-dark);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .layer {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 24px;
+            padding: 22px 28px;
+            background: var(--canopy-900);
+            border-bottom: 1px solid var(--line-dark);
+            align-items: start;
+        }
+
+        .layer:last-child {
+            border-bottom: none;
+        }
+
+        .layer:nth-child(even) {
+            background: #152219;
+        }
+
+        .layer-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--moss-light);
+            padding-top: 3px;
+        }
+
+        .layer-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 9px;
+        }
+
+        .chip {
+            font-size: 13px;
+            padding: 6px 13px;
+            border: 1px solid var(--line-dark);
+            border-radius: 100px;
+            color: rgba(236, 229, 211, 0.82);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        @media (max-width:700px) {
+            .layer {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ---------- Roles / dashboards ---------- */
+        .roles {
+            background: var(--paper);
+        }
+
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .role-card {
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 26px 22px;
+            background: #f2ecdd;
+            transition: transform .25s ease, border-color .25s ease;
+        }
+
+        .role-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--moss);
+        }
+
+        .role-num {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--amber);
+            margin-bottom: 16px;
+        }
+
+        .role-card h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 14px;
+            font-family: 'Fraunces', serif;
+        }
+
+        .role-card ul {
+            list-style: none;
+            font-size: 13px;
+            color: rgba(32, 36, 29, 0.66);
+        }
+
+        .role-card li {
+            padding: 3px 0;
+        }
+
+        @media (max-width:900px) {
+            .role-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width:560px) {
+            .role-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ---------- Stack ---------- */
+        .stack {
+            background: var(--paper-dim);
+        }
+
+        .stack-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px 40px;
+        }
+
+        .stack-group h5 {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--moss);
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .stack-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .stack-tags span {
+            font-size: 12.5px;
+            padding: 5px 11px;
+            background: var(--canopy-900);
+            color: var(--paper);
+            border-radius: 3px;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        @media (max-width:760px) {
+            .stack-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width:520px) {
+            .stack-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ---------- Roadmap ---------- */
+        .roadmap {
+            background: var(--canopy-950);
+            color: var(--paper);
+        }
+
+        .roadmap .eyebrow {
+            color: var(--amber-soft);
+        }
+
+        .roadmap .eyebrow::before {
+            background: var(--amber-soft);
+        }
+
+        .roadmap .section-head p {
+            color: rgba(236, 229, 211, 0.62);
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 36px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 9px;
+            top: 6px;
+            bottom: 6px;
+            width: 1px;
+            background: var(--line-dark);
+        }
+
+        .tl-item {
+            position: relative;
+            padding-bottom: 44px;
+        }
+
+        .tl-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .tl-dot {
+            position: absolute;
+            left: -36px;
+            top: 2px;
+            width: 19px;
+            height: 19px;
+            border-radius: 50%;
+            background: var(--canopy-950);
+            border: 1px solid var(--amber-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tl-dot::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--amber-soft);
+        }
+
+        .tl-head {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+
+        .tl-head h4 {
+            font-family: 'Fraunces', serif;
+            font-size: 19px;
+            font-weight: 600;
+        }
+
+        .tl-head span {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11.5px;
+            color: var(--moss-light);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .tl-tasks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 10px;
+            font-size: 13px;
+            color: rgba(236, 229, 211, 0.68);
+        }
+
+        .tl-tasks span {
+            position: relative;
+            padding-left: 14px;
+        }
+
+        .tl-tasks span::before {
+            content: '·';
+            position: absolute;
+            left: 2px;
+        }
+
+        .tl-tasks span:first-child::before {
+            content: '';
+        }
+
+        .tl-tasks span:first-child {
+            padding-left: 0;
+        }
+
+        /* ---------- Metrics band ---------- */
+        .metrics {
+            background: var(--moss);
+            color: var(--canopy-950);
+            padding: 70px 0;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .metric {
+            border-left: 1px solid rgba(14, 23, 18, 0.25);
+            padding-left: 20px;
+        }
+
+        .metric .n {
+            font-family: 'Fraunces', serif;
+            font-size: 2.1rem;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        .metric .l {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-top: 8px;
+            opacity: 0.75;
+        }
+
+        @media (max-width:800px) {
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+                row-gap: 32px;
+            }
+        }
+
+        /* ---------- Footer ---------- */
+        footer {
+            background: var(--canopy-950);
+            color: rgba(236, 229, 211, 0.5);
+            padding: 44px 0;
+            font-size: 12.5px;
+        }
+
+        .foot-inner {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+            font-family: 'IBM Plex Mono', monospace;
+            letter-spacing: 0.02em;
+        }
+    </style>
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
+</head>
+
+<body>
+
+    <header class="nav">
+        <div class="nav-inner">
+            <a href="index.html" class="brand">
+                <img src="logo.svg" alt="EcoSentinel Logo">
+                EcoSentinel
+            </a>
+            <nav class="nav-links">
+                <a href="#objective">Objective</a>
+                <a href="#modules">Modules</a>
+                <a href="#architecture">Architecture</a>
+                <a href="#roadmap">Roadmap</a>
+                <div class="nav-divider"></div>
+                <a href="detection.html">Detection</a>
+                <a href="species.html">Species</a>
+                <a href="audio.html">Audio</a>
+                <a href="log.html">Logs</a>
+                <a href="login.html" style="color: var(--amber-soft); font-weight: 500; border: 1px solid rgba(227, 172, 102, 0.4); padding: 4px 12px; border-radius: 3px;">Launch Console</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <svg class="topo" viewBox="0 0 1200 700" preserveAspectRatio="none">
+            <g fill="none" stroke="#5c7d54" stroke-width="1">
+                <path d="M-50,600 C200,520 350,650 600,560 C850,480 950,600 1250,540" opacity="0.18" />
+                <path d="M-50,540 C220,460 380,590 620,500 C860,420 970,540 1250,480" opacity="0.14" />
+                <path d="M-50,480 C240,400 400,530 640,440 C870,360 990,480 1250,420" opacity="0.11" />
+                <path d="M-50,110 C180,40 340,150 560,70 C800,-10 920,110 1250,60" opacity="0.15" />
+                <path d="M-50,170 C200,100 360,210 580,130 C820,50 940,170 1250,120" opacity="0.11" />
+            </g>
+        </svg>
+        <div class="wrap">
+            <div class="hero-kicker">AI &amp; Computer Vision for Biodiversity</div>
+            <h1>Wildlife Population<br><em>Intelligence</em> System</h1>
+            <p class="hero-sub">An AI-powered platform that turns camera trap images, drone imagery, satellite data, and
+                field audio into species identification, population estimates, and habitat health scores — built for the
+                people who protect what's left of the wild.</p>
+            <div class="hero-meta">
+                <div>Modules<strong>14 engines</strong></div>
+                <div>Programme<strong>8-week build</strong></div>
+                <div>Species Groups<strong>Mammals → Marine</strong></div>
+                <div>Deployment<strong>Docker · AWS / Azure</strong></div>
+            </div>
+        </div>
+        <div class="viewfinder">
+            <div class="vf-corner tl"></div>
+            <div class="vf-corner tr"></div>
+            <div class="vf-corner bl"></div>
+            <div class="vf-corner br"></div>
+            <div class="vf-tag">CAM-014 · 03:42:11<span>Panthera pardus — 96.2% conf.</span></div>
+        </div>
+    </section>
+
+    <section class="objective" id="objective">
+        <div class="wrap">
+            <div class="section-head reveal">
+                <div class="eyebrow">Objective</div>
+                <h2>One platform, from raw sensor data to conservation action.</h2>
+            </div>
+            <div class="obj-grid">
+                <div class="obj-body reveal">
+                    <p>The system uses <strong>image recognition, acoustic analysis, computer vision, and machine
+                            learning</strong> to automatically identify wildlife species, estimate population sizes,
+                        monitor biodiversity changes, detect endangered species, and analyze habitat health.</p>
+                    <p>It ingests <strong>camera trap images, drone imagery, satellite data, environmental sensors, and
+                            wildlife audio recordings</strong> to support biodiversity conservation, ecological
+                        monitoring, habitat management, and wildlife research — replacing manual review with continuous,
+                        automated intelligence.</p>
+                    <p>Every model output — a detection, a call, a population trend — is designed to resolve into one
+                        thing: a clear, actionable signal for the person deciding where to send a patrol or where to
+                        focus restoration.</p>
+                </div>
+                <div class="users-card reveal">
+                    <h3>Built For</h3>
+                    <ul>
+                        <li>Wildlife Researchers</li>
+                        <li>Conservation Organizations</li>
+                        <li>Forest Departments</li>
+                        <li>Environmental Agencies</li>
+                        <li>National Parks</li>
+                        <li>NGOs</li>
+                        <li>Biodiversity Monitoring Teams</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="modules" id="modules">
+        <div class="wrap">
+            <div class="section-head reveal">
+                <div class="eyebrow">Modules</div>
+                <h2>Fourteen engines, one monitoring workflow.</h2>
+                <p>Each module below is a self-contained engine in the system — logged here field-notebook style, in
+                    build order.</p>
+            </div>
+        </div>
+        <div class="wrap" style="padding:0;">
+            <div class="mod-grid reveal">
+                <div class="mod-card">
+                    <div class="mod-id"><span>MOD-01</span><span>AUTH</span></div>
+                    <h4>Authentication &amp; Role-Based Access</h4>
+                    <ul>
+                        <li>JWT + OAuth2 login</li>
+                        <li>Role-based access control</li>
+                        <li>Researcher, Officer, Forest Dept, Admin roles</li>
+                    </ul>
+                </div>
+                <div class="mod-card">
+                    <div class="mod-id"><span>MOD-02</span><span>SURVEY</span></div>
+                    <h4>Survey &amp; Monitoring Management</h4>
+                    <ul>
+                        <li>Monitoring site &amp; camera trap registration</li>
+                        <li>Audio sensor management</li>
+                        <li>GPS, habitat type, protected area logging</li>
+                    </ul>
+                </div>
+                <div class="mod-card">
+                    <div class="mod-id"><span>MOD-03</span><span>VISION</span></div>
+                    <h4>Wildlife Image Analysis Engine</h4>
+                    <ul>
+                        <li>Camera trap &amp; drone image processing</li>
+                        <li>Animal detection + bounding boxes</li>
+                        <li>Individual animal identification</li>
+                    </ul>
+                </div>
+                <div class="mod-card">
+                    <div class="mod-id"><span>MOD-04</span><span>AUDIO</span></div>
+                    <h4>Bioacoustic Recognition Engine</h4>
+                    <ul>
+                        <li>Bird, mammal, amphibian &amp; insect calls</li>
+                        <li>Acoustic event detection</li>
+                        <li>Environmental noise filtering</li>
+                    </ul>
+                </div>
+                <div class="mod-card">
+                    <div class="mod-id"><span>MOD-05</span><span>SPECIES</span></div>
+                    <h4>Species Identification Engine</h4>
+                    <ul>
+                        <li>Taxonomic classification + confidence scoring</li>
+                        <li>Endangered species detection</li>
+                        <li>Unknown species flagging</li>
+                    </ul>
+                </div>
+                <div class="mod-card">
+                    <div class="mod-id"><span>MOD-06</span><span>POP</span></div>
+                    <h4>Population Estimation Engine</h4>
+                    <ul>
+                        <li>Counting, density &amp; trend analysis</li>
+                        <li>Migration analysis</li>
+                        <li>Species distribution mapping</li>
+                    </ul>
+                </div>
+                <div class="mod-card">
+                    <div class="mod-id"><span>MOD-07</span><span>BIODIV</span></div>
+                    <h4>Biodiversity Intelligence Engine</h4>
+                    <ul>
+                        <li>Biodiversity index calculation</li>
+                        <li>Ecosystem monitoring</li>
+                        <li>Conservation priority analysis</li>
+                    </ul>
+                </div>
+                <div class="mod-card">
+                    <div class="mod-id"><span>MOD-08</span><span>HABITAT</span></div>
+                    <h4>Habitat Intelligence Engine</h4>
+                    <ul>
+                        <li>Habitat classification &amp; degradation detection</li>
+                        <li>Vegetation analysis</li>
+                        <li>Habitat suitability prediction</li>
+                    </ul>
+                </div>
+                <div class="mod-card">
+                    <div class="mod-id"><span>MOD-09</span><span>ACTION</span></div>
+                    <h4>Conservation Recommendation Engine</h4>
+                    <ul>
+                        <li>Restoration &amp; protection strategies</li>
+                        <li>Monitoring optimization</li>
+                        <li>Resource allocation guidance</li>
+                    </ul>
+                </div>
+                <div class="mod-card">
+                    <div class="mod-id"><span>MOD-10</span><span>SCORE</span></div>
+                    <h4>Wildlife Health Scoring Engine</h4>
+                    <ul>
+                        <li>Weighted ecosystem health score</li>
+                        <li>5-tier status: Excellent → Critical</li>
+                        <li>Species, habitat &amp; population sub-scores</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="arch" id="architecture">
+        <div class="wrap">
+            <div class="section-head reveal">
+                <div class="eyebrow">Architecture</div>
+                <h2>From sensor to signal.</h2>
+                <p>A microservices layer sits behind an API gateway, feeding a dedicated AI/ML analytics layer before
+                    anything reaches a dashboard.</p>
+            </div>
+            <div class="layer-stack reveal">
+                <div class="layer">
+                    <div class="layer-label">Access Channels</div>
+                    <div class="layer-items">
+                        <span class="chip">Web App</span><span class="chip">Mobile (Android / iOS)</span><span
+                            class="chip">API Clients</span><span class="chip">Field Devices</span><span
+                            class="chip">Camera Trap / Audio Recorder</span>
+                    </div>
+                </div>
+                <div class="layer">
+                    <div class="layer-label">API Gateway</div>
+                    <div class="layer-items">
+                        <span class="chip">FastAPI</span><span class="chip">Routing &amp; Auth</span><span
+                            class="chip">Rate Limiting</span><span class="chip">Load Balancing</span><span
+                            class="chip">Logging &amp; Throttling</span>
+                    </div>
+                </div>
+                <div class="layer">
+                    <div class="layer-label">Microservices</div>
+                    <div class="layer-items">
+                        <span class="chip">User &amp; Access</span><span class="chip">Survey &amp;
+                            Monitoring</span><span class="chip">Image Ingestion</span><span class="chip">Audio
+                            Ingestion</span><span class="chip">Wildlife Image Analysis</span><span
+                            class="chip">Bioacoustic Analysis</span><span class="chip">Species
+                            Identification</span><span class="chip">Population Estimation</span><span
+                            class="chip">Biodiversity Intelligence</span><span class="chip">Habitat
+                            Intelligence</span><span class="chip">Conservation Recommendation</span><span
+                            class="chip">Alert &amp; Notification</span><span class="chip">Health Scoring</span><span
+                            class="chip">Data Integration</span>
+                    </div>
+                </div>
+                <div class="layer">
+                    <div class="layer-label">AI / ML Layer</div>
+                    <div class="layer-items">
+                        <span class="chip">Object Detection (YOLOv8 / RCNN)</span><span class="chip">Species Classifier
+                            (EfficientNet / ResNet)</span><span class="chip">Audio Classifier (BirdNET /
+                            YAMNet)</span><span class="chip">Population Model (CNN / Regression)</span><span
+                            class="chip">Habitat Suitability (Deep Learning)</span><span class="chip">Trend Forecasting
+                            (LSTM / ARIMA)</span>
+                    </div>
+                </div>
+                <div class="layer">
+                    <div class="layer-label">Data &amp; Storage</div>
+                    <div class="layer-items">
+                        <span class="chip">PostgreSQL + PostGIS</span><span class="chip">MongoDB</span><span
+                            class="chip">Data Lake (AWS S3 / Azure Blob)</span><span class="chip">Time Series DB
+                            (TimescaleDB)</span><span class="chip">Redis Cache</span><span class="chip">Vector DB
+                            (Pinecone / FAISS)</span>
+                    </div>
+                </div>
+                <div class="layer">
+                    <div class="layer-label">External Sources</div>
+                    <div class="layer-items">
+                        <span class="chip">Satellite (Sentinel, Landsat, MODIS)</span><span class="chip">Environmental /
+                            Climate APIs</span><span class="chip">Bioacoustic Libraries (Xeno-canto)</span><span
+                            class="chip">Biodiversity Data (GBIF, IUCN Red List)</span><span class="chip">Government
+                            &amp; Regulatory APIs</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="roles" id="dashboards">
+        <div class="wrap">
+            <div class="section-head reveal">
+                <div class="eyebrow">Dashboards</div>
+                <h2>One system, four working views.</h2>
+            </div>
+            <div class="role-grid reveal">
+                <div class="role-card">
+                    <div class="role-num">ROLE / 01</div>
+                    <h4>Wildlife Researcher</h4>
+                    <ul>
+                        <li>Species observations</li>
+                        <li>Population analytics</li>
+                        <li>Biodiversity reports</li>
+                        <li>Habitat insights</li>
+                    </ul>
+                </div>
+                <div class="role-card">
+                    <div class="role-num">ROLE / 02</div>
+                    <h4>Conservation Officer</h4>
+                    <ul>
+                        <li>Threat monitoring</li>
+                        <li>Conservation priorities</li>
+                        <li>Species trend analysis</li>
+                        <li>Restoration recommendations</li>
+                    </ul>
+                </div>
+                <div class="role-card">
+                    <div class="role-num">ROLE / 03</div>
+                    <h4>Forest Department</h4>
+                    <ul>
+                        <li>Protected area monitoring</li>
+                        <li>Wildlife movement analysis</li>
+                        <li>Patrol planning</li>
+                        <li>Incident reports</li>
+                    </ul>
+                </div>
+                <div class="role-card">
+                    <div class="role-num">ROLE / 04</div>
+                    <h4>Administrator</h4>
+                    <ul>
+                        <li>User management</li>
+                        <li>Platform analytics</li>
+                        <li>Monitoring system management</li>
+                        <li>Report generation</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="stack" id="stack">
+        <div class="wrap">
+            <div class="section-head reveal">
+                <div class="eyebrow">Tools &amp; Tech Stack</div>
+                <h2>What it's built on.</h2>
+            </div>
+            <div class="stack-grid reveal">
+                <div class="stack-group">
+                    <h5>Backend / Frontend</h5>
+                    <div class="stack-tags">
+                        <span>Python</span><span>FastAPI</span><span>JavaScript</span><span>React.js</span><span>Next.js</span><span>Tailwind
+                            CSS</span></div>
+                </div>
+                <div class="stack-group">
+                    <h5>Database</h5>
+                    <div class="stack-tags"><span>PostgreSQL</span><span>PostGIS</span><span>MongoDB</span></div>
+                </div>
+                <div class="stack-group">
+                    <h5>Computer Vision</h5>
+                    <div class="stack-tags">
+                        <span>YOLOv8</span><span>TensorFlow</span><span>PyTorch</span><span>OpenCV</span></div>
+                </div>
+                <div class="stack-group">
+                    <h5>Audio Intelligence</h5>
+                    <div class="stack-tags"><span>YAMNet</span><span>BirdNET</span><span>Librosa</span><span>TensorFlow
+                            Audio</span></div>
+                </div>
+                <div class="stack-group">
+                    <h5>Machine Learning</h5>
+                    <div class="stack-tags">
+                        <span>Scikit-learn</span><span>XGBoost</span><span>Pandas</span><span>NumPy</span></div>
+                </div>
+                <div class="stack-group">
+                    <h5>GIS &amp; Remote Sensing</h5>
+                    <div class="stack-tags">
+                        <span>GeoPandas</span><span>QGIS</span><span>Rasterio</span><span>GDAL</span></div>
+                </div>
+                <div class="stack-group">
+                    <h5>Satellite &amp; Environmental APIs</h5>
+                    <div class="stack-tags"><span>Sentinel Hub</span><span>Google Earth
+                            Engine</span><span>OpenStreetMap</span><span>NASA EarthData</span></div>
+                </div>
+                <div class="stack-group">
+                    <h5>Visualization</h5>
+                    <div class="stack-tags">
+                        <span>Plotly</span><span>Leaflet.js</span><span>Mapbox</span><span>Chart.js</span></div>
+                </div>
+                <div class="stack-group">
+                    <h5>Cloud &amp; DevOps</h5>
+                    <div class="stack-tags"><span>Docker</span><span>AWS / Azure</span><span>GitHub
+                            Actions</span><span>Postman</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="roadmap" id="roadmap">
+        <div class="wrap">
+            <div class="section-head reveal">
+                <div class="eyebrow">Roadmap</div>
+                <h2>Eight weeks, four milestones.</h2>
+            </div>
+            <div class="timeline reveal">
+                <div class="tl-item">
+                    <div class="tl-dot"></div>
+                    <div class="tl-head">
+                        <h4>Project Initialization &amp; Core Setup</h4><span>Week 01–02</span>
+                    </div>
+                    <div class="tl-tasks"><span>System architecture &amp; DB schema</span><span>Auth &amp;
+                            RBAC</span><span>Monitoring workflows</span><span>Snapshot Serengeti + iNaturalist datasets
+                            integrated</span></div>
+                </div>
+                <div class="tl-item">
+                    <div class="tl-dot"></div>
+                    <div class="tl-head">
+                        <h4>Species Recognition &amp; Biodiversity Analysis</h4><span>Week 03–04</span>
+                    </div>
+                    <div class="tl-tasks"><span>Image analysis engine</span><span>Bioacoustic workflows
+                            (BirdCLEF)</span><span>Species identification models</span><span>Biodiversity
+                            analytics</span></div>
+                </div>
+                <div class="tl-item">
+                    <div class="tl-dot"></div>
+                    <div class="tl-head">
+                        <h4>Population Intelligence &amp; Conservation</h4><span>Week 05–06</span>
+                    </div>
+                    <div class="tl-tasks"><span>Population estimation engine</span><span>Habitat
+                            intelligence</span><span>Conservation recommendations</span><span>Ecosystem health
+                            analytics</span></div>
+                </div>
+                <div class="tl-item">
+                    <div class="tl-dot"></div>
+                    <div class="tl-head">
+                        <h4>Analytics, Testing &amp; Deployment</h4><span>Week 07–08</span>
+                    </div>
+                    <div class="tl-tasks"><span>Executive dashboards + GIS visualization</span><span>End-to-end &amp;
+                            security testing</span><span>Docker containerization</span><span>Production deployment on
+                            AWS / Azure</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="metrics">
+        <div class="wrap">
+            <div class="metrics-grid reveal">
+                <div class="metric">
+                    <div class="n">30%</div>
+                    <div class="l">Species Diversity Weight</div>
+                </div>
+                <div class="metric">
+                    <div class="n">25%</div>
+                    <div class="l">Population Stability Weight</div>
+                </div>
+                <div class="metric">
+                    <div class="n">20%</div>
+                    <div class="l">Habitat Quality Weight</div>
+                </div>
+                <div class="metric">
+                    <div class="n">15%</div>
+                    <div class="l">Endangered Species Status</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="wrap foot-inner">
+            <span>ECOSENTINEL &mdash; Wildlife Population Intelligence System</span>
+            <span>DOCKER · AWS / AZURE · FASTAPI · REACT.JS</span>
+        </div>
+    </footer>
+
+    <script>
+        const revealEls = document.querySelectorAll('.reveal');
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+        }, { threshold: 0.12 });
+        revealEls.forEach(el => io.observe(el));
+    </script>
+
+</body>
+
+</html>

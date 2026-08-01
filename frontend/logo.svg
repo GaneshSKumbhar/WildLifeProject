@@ -1,0 +1,9 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer leaf/shield contour -->
+  <path d="M16 3C16 3 5 11.5 5 20.5C5 26.8513 10.1487 32 16 32C21.8513 32 27 26.8513 27 20.5C27 11.5 16 3 16 3Z" fill="#172519" stroke="#e3ac66" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Radar/signal arcs -->
+  <path d="M11 16.5C13.5 14.5 18.5 14.5 21 16.5" stroke="#e3ac66" stroke-width="2" stroke-linecap="round"/>
+  <path d="M13.5 19.5C14.8333 18.5 17.1667 18.5 18.5 19.5" stroke="#9db892" stroke-width="2" stroke-linecap="round"/>
+  <!-- Intelligence core dot -->
+  <circle cx="16" cy="24" r="3" fill="#e3ac66"/>
+</svg>

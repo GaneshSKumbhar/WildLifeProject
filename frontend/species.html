@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detection — EcoSentinel</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
+</head>
+<body>
+    <div id="shell-root"></div>
+
+    <!-- Firebase CDN (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+
+    <script>
+        (async function() {
+            // Render shell — waits for Firebase auth
+            const session = await WI.renderShell('species', 'SPECIES DETECTION');
+
+            document.getElementById('page-slot').innerHTML = `
+                <div class="page">
+                    <div class="page-head">
+                        <div class="eyebrow">MOD-03 — /predict/ &middot; /predict_image/</div>
+                        <h1>Computer Vision Ingestion</h1>
+                        <p>Submit camera trap imagery or drone frames to identify species, draw bounding boxes, and log results to the cloud database.</p>
+                    </div>
+
+                    <div class="cols-2">
+                        <div class="card">
+                            <div class="card-head">
+                                <h3>Camera Trap Frame</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="dropzone" id="dz">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16.5V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2.5M7 9l5-5 5 5M12 4v13"/></svg>
+                                    <div class="dz-title">Ingest frame (click or drag &amp; drop)</div>
+                                    <div class="dz-sub">JPG &bull; PNG &bull; WEBP</div>
+                                    <input type="file" id="file-input" accept="image/*">
+                                </div>
+                                <div class="filebar" id="filebar" style="display:none;">
+                                    <span id="filebar-name"></span>
+                                    <span class="clear" id="filebar-clear">remove</span>
+                                </div>
+
+                                <div style="margin-top:20px;">
+                                    <label class="mono" style="font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.05em;">Monitoring Station / Site ID</label>
+                                    <input type="text" class="text-input mono" id="site-input" placeholder="e.g. CAM-ZONE-14" style="margin-top:8px;">
+                                </div>
+
+                                <div style="display:flex; gap:12px; margin-top:20px;">
+                                    <button class="btn btn-primary btn-block" id="run-detect">
+                                        <span class="spinner"></span>
+                                        <span class="label">Run Species Identifier</span>
+                                    </button>
+                                    <button class="btn btn-ghost btn-block" id="run-annotated">
+                                        <span class="spinner"></span>
+                                        <span class="label">Get Annotated Frame</span>
+                                    </button>
+                                </div>
+                                <div class="error-banner" id="err"></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-head">
+                                <h3>Visual Preview</h3>
+                                <span class="count" id="preview-status">AWAITING FRAME</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="tframe" id="tframe">
+                                    <div class="preview-ambient">
+                                        <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+                                    </div>
+                                    <div class="tf-media empty" id="tf-media" style="position:relative; z-index:2;">Ingest file to display preview</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top:32px;">
+                        <div class="card-head">
+                            <h3>Detections Log</h3>
+                            <span class="count" id="det-count">0 OBJECTS</span>
+                        </div>
+                        <div class="card-body" id="results-body">
+                            <div class="empty-state">Results will display here after model analysis is triggered.</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let currentFile = null;
+            let lastDetections = null;
+
+            const dz = document.getElementById('dz');
+            const fileInput = document.getElementById('file-input');
+            const filebar = document.getElementById('filebar');
+            const filebarName = document.getElementById('filebar-name');
+            const err = document.getElementById('err');
+            const previewStatus = document.getElementById('preview-status');
+            const resultsBody = document.getElementById('results-body');
+            const detCount = document.getElementById('det-count');
+            const runDetectBtn = document.getElementById('run-detect');
+            const runAnnotatedBtn = document.getElementById('run-annotated');
+
+            dz.addEventListener('click', function() { fileInput.click(); });
+
+            ['dragover', 'dragenter'].forEach(function(ev) {
+                dz.addEventListener(ev, function(e) { e.preventDefault(); dz.classList.add('drag'); });
+            });
+            ['dragleave', 'drop'].forEach(function(ev) {
+                dz.addEventListener(ev, function(e) { e.preventDefault(); dz.classList.remove('drag'); });
+            });
+
+            dz.addEventListener('drop', function(e) {
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+            });
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files[0]) setFile(e.target.files[0]);
+            });
+            document.getElementById('filebar-clear').addEventListener('click', function() { setFile(null); });
+
+            function setFile(file) {
+                currentFile = file;
+                WI.hideError(err);
+                if (!file) {
+                    filebar.style.display = 'none';
+                    fileInput.value = '';
+                    document.getElementById('tframe').innerHTML = `
+                        <div class="preview-ambient">
+                            <div class="firefly"></div><div class="firefly"></div><div class="firefly"></div><div class="firefly"></div>
+                        </div>
+                        <div class="tf-media empty" style="position:relative; z-index:2;">Ingest file to display preview</div>
+                    `;
+                    previewStatus.textContent = 'AWAITING FRAME';
+                    resultsBody.innerHTML = '<div class="empty-state">Results will display here after model analysis is triggered.</div>';
+                    detCount.textContent = '0 OBJECTS';
+                    return;
+                }
+                filebar.style.display = 'flex';
+                filebarName.textContent = file.name + ' · ' + (file.size / 1024).toFixed(0) + ' KB';
+                var url = URL.createObjectURL(file);
+                document.getElementById('tframe').innerHTML = '<img class="tf-media" src="' + url + '">';
+                previewStatus.textContent = 'RAW INGESTED';
+            }
+
+            runDetectBtn.addEventListener('click', async function() {
+                if (!currentFile) { WI.showError(err, 'Ingest an image file first.'); return; }
+                setLoading(runDetectBtn, true);
+                document.getElementById('tframe').classList.add('scanning');
+                WI.hideError(err);
+                try {
+                    var fd = new FormData();
+                    fd.append('file', currentFile);
+                    var res = await fetch(WI.base() + '/predict/', { method: 'POST', body: fd });
+                    if (!res.ok) throw new Error('API returned code ' + res.status);
+                    var data = await res.json();
+                    renderResults(data);
+                    WI.toast('Species identification complete');
+
+                    // Automatically get annotated frame as well
+                    fetchAnnotatedFrame();
+                } catch (e) {
+                    WI.showError(err, 'Model Inference Failed: ' + e.message);
+                } finally { 
+                    setLoading(runDetectBtn, false); 
+                    document.getElementById('tframe').classList.remove('scanning');
+                }
+            });
+
+            async function fetchAnnotatedFrame() {
+                if (!currentFile) return;
+                setLoading(runAnnotatedBtn, true);
+                try {
+                    var fd = new FormData();
+                    fd.append('file', currentFile);
+                    var res = await fetch(WI.base() + '/predict_image/', { method: 'POST', body: fd });
+                    if (!res.ok) throw new Error('API returned code ' + res.status);
+                    var blob = await res.blob();
+                    var url = URL.createObjectURL(blob);
+                    document.getElementById('tframe').innerHTML = '<img class="tf-media" src="' + url + '">';
+                    previewStatus.textContent = 'ANNOTATED FRAME';
+                } catch (e) {
+                    WI.showError(err, 'Rendering Failed: ' + e.message);
+                } finally { setLoading(runAnnotatedBtn, false); }
+            }
+
+            runAnnotatedBtn.addEventListener('click', function() {
+                if (!currentFile) { WI.showError(err, 'Ingest an image file first.'); return; }
+                WI.hideError(err);
+                fetchAnnotatedFrame();
+            });
+
+            function setLoading(btn, on) { btn.classList.toggle('loading', on); btn.disabled = on; }
+
+            function extractDetections(data) {
+                if (Array.isArray(data)) return data;
+                if (data && Array.isArray(data.detections)) return data.detections;
+                if (data && Array.isArray(data.predictions)) return data.predictions;
+                if (data && typeof data === 'object') return [data];
+                return [];
+            }
+
+            function renderResults(data) {
+                lastDetections = extractDetections(data);
+                resultsBody.innerHTML = '';
+                detCount.textContent = lastDetections.length + (lastDetections.length === 1 ? ' OBJECT' : ' OBJECTS');
+
+                if (lastDetections.length === 0) {
+                    resultsBody.innerHTML = '<div class="empty-state" style="color:#e3ac66;"><strong>NO PREDICTION</strong><br>No valid wildlife objects were identified by the model in this frame.</div>';
+                    return;
+                }
+
+                var top = lastDetections[0];
+                var label = top.class || top.label || top.species || 'unidentified';
+                var confKey = Object.keys(top).find(function(k) { return /confidence|probability|score/i.test(k); });
+                var confVal = confKey != null ? (top[confKey] <= 1 ? top[confKey] * 100 : top[confKey]) : null;
+
+                var strip = document.createElement('div');
+                strip.className = 'headline-result';
+                strip.innerHTML = '<div class="badge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><div><h4 style="text-transform:capitalize;">' + label + '</h4><div class="sub">' + lastDetections.length + ' identification(s)' + (confVal != null ? ' · Top: ' + confVal.toFixed(1) + '%' : '') + '</div></div>';
+                resultsBody.appendChild(strip);
+
+                lastDetections.forEach(function(obj) { resultsBody.appendChild(WI.renderObjectCard(obj)); });
+
+                // Save to Firestore button
+                var logBar = document.createElement('div');
+                logBar.style.marginTop = '20px';
+                logBar.innerHTML = '<button class="btn btn-primary btn-block" id="save-db-btn"><span class="spinner"></span><span class="label">Save to Cloud Database</span></button>';
+                resultsBody.appendChild(logBar);
+                document.getElementById('save-db-btn').addEventListener('click', saveToFirestore);
+            }
+
+            async function saveToFirestore() {
+                var btn = document.getElementById('save-db-btn');
+                setLoading(btn, true);
+                var site = document.getElementById('site-input').value.trim() || '';
+                var uid = session.user.uid;
+
+                try {
+                    for (var i = 0; i < lastDetections.length; i++) {
+                        var obj = lastDetections[i];
+                        var speciesName = obj.class || obj.label || obj.species || 'unknown';
+                        var confKey = Object.keys(obj).find(function(k) { return /confidence|probability|score/i.test(k); });
+                        var confidence = confKey != null ? (obj[confKey] <= 1 ? obj[confKey] * 100 : obj[confKey]) : 0;
+
+                        // Find or create species in Firestore
+                        var species = await FireDB.findOrCreateSpecies(speciesName);
+
+                        // Save image record
+                        var imageId = await FireDB.saveImage({
+                            user_id: uid,
+                            image_path: currentFile ? currentFile.name : '',
+                            species_id: species.id,
+                            species_name: speciesName,
+                            animal_count: lastDetections.length,
+                            confidence: confidence,
+                            site: site
+                        });
+
+                        // Save population record
+                        await FireDB.savePopulation({
+                            species_id: species.id,
+                            species_name: speciesName,
+                            image_id: imageId,
+                            audio_id: null,
+                            population_count: 1,
+                            location: site
+                        });
+                    }
+                    WI.toast(lastDetections.length + ' record(s) saved to Firestore');
+                    btn.querySelector('.label').textContent = '✓ Saved to Database';
+                    btn.disabled = true;
+                } catch (e) {
+                    WI.toast('Database save failed: ' + e.message);
+                    console.error(e);
+                } finally { setLoading(btn, false); }
+            }
+        })();
+    </script>
+</body>
+</html>
