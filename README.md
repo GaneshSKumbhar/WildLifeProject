@@ -1,6 +1,22 @@
+<div align="center">
+
 # 🐾 Wildlife Object & Audio Detection API
 
-A full-stack wildlife monitoring system that combines **computer vision** and **audio classification** to automatically detect and identify wildlife species. The backend is built with **FastAPI**, using a custom-trained **YOLOv8** model for image-based species detection and a **TensorFlow/Keras** model for audio-based species classification. The project also includes a web frontend with authentication, detection history, and a species reference library.
+### AI-Powered Wildlife Monitoring — Vision + Audio Species Detection
+
+[![Python](https://img.shields.io/badge/Python-3.9%20--%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-purple)](https://github.com/ultralytics/ultralytics)
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-Audio%20Model-FF6F00?logo=tensorflow&logoColor=white)](https://www.tensorflow.org/)
+[![Auth](https://img.shields.io/badge/Auth-Google%20Sign--In-4285F4?logo=google&logoColor=white)](#)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](#-license)
+[![Version](https://img.shields.io/badge/Version-1.0.0-blue)](#)
+
+Detect wildlife species from **photos** using a custom-trained YOLOv8 model, and classify wildlife **sounds** using a TensorFlow/Keras audio model — all wrapped in a FastAPI backend with a full authenticated web frontend, detection history, and a species reference library.
+
+[Features](#-features) • [Screenshots](#-application-screens) • [Setup](#-setup-instructions) • [API Reference](#-api-endpoints) • [Troubleshooting](#-troubleshooting) • [Contributing](#-contributing)
+
+</div>
 
 ---
 
@@ -28,17 +44,21 @@ A full-stack wildlife monitoring system that combines **computer vision** and **
 
 ## ✨ Features
 
-- 🖼️ **Image Detection** — Upload wildlife photos and get bounding boxes with species names and confidence scores using a custom YOLOv8 model.
-- 🎵 **Audio Classification** — Upload audio clips (roars, calls, chirps, etc.) and classify them against a trained audio model.
-- 🎯 **Targeted Species Detection** — Check whether a *specific* species is present in an image or audio clip.
-- 🔐 **Google Login** — Secure authentication via Google Sign-In.
-- 🕒 **History Log** — Track and review past detections.
-- 📚 **Species Library** — Browse reference information about detectable species.
-- 📑 **Auto-generated API Docs** — Interactive Swagger UI and ReDoc out of the box.
+| | |
+|---|---|
+| 🖼️ **Image Detection** | Upload wildlife photos and get bounding boxes with species names and confidence scores using a custom YOLOv8 model. |
+| 🎵 **Audio Classification** | Upload audio clips (roars, calls, chirps, etc.) and classify them against a trained audio model. |
+| 🎯 **Targeted Species Detection** | Check whether a *specific* species is present in an image or audio clip. |
+| 🔐 **Google Login** | Secure authentication via Google Sign-In. |
+| 🕒 **History Log** | Track and review past detections. |
+| 📚 **Species Library** | Browse reference information about detectable species. |
+| 📑 **Auto-generated API Docs** | Interactive Swagger UI and ReDoc out of the box. |
 
 ---
 
 ## 🛠️ Tech Stack
+
+<div align="center">
 
 | Layer            | Technology                                  |
 |-------------------|----------------------------------------------|
@@ -49,6 +69,8 @@ A full-stack wildlife monitoring system that combines **computer vision** and **
 | Server            | Uvicorn (ASGI)                               |
 | Frontend          | HTML/CSS/JS (served from FastAPI root `/`)   |
 | Auth              | Google Sign-In                               |
+
+</div>
 
 ---
 
@@ -71,8 +93,9 @@ WildlifeProject/
 │   ├── login.png                # Login page
 │   ├── googleLogin.png          # Google Sign-In flow
 │   ├── detection.png            # Detection in progress
-│   ├── animaldetected.png       # Detection result view
-│   ├── HistoryLog.png           # Detection history page
+│   ├── aniamaldetected.png      # Detection result view
+│   ├── audio.png                # Audio detection page
+│   ├── history.png              # Detection history page
 │   └── species.png              # Species reference page
 │
 ├── best.pt                      # YOLOv8 image detection model (project root)
@@ -199,47 +222,33 @@ The frontend interface is automatically served at the root URL `/`.
 
 ## 🖥️ Application Screens
 
-The project ships with a full web UI backed by the API. Below is a quick tour based on the app's screens:
+<div align="center">
 
-### Home
-Landing page of the application.
+### 🏠 Home
+<img src="images/index.png" alt="Home Page" width="800"/>
 
-![Home](images/index.png)
+### 🔐 Login
+<img src="images/login.png" alt="Login Page" width="800"/>
 
-### Login
-Standard login screen.
+### 🔑 Google Sign-In
+<img src="images/googleLogin.png" alt="Google Sign-In" width="800"/>
 
-![Login](images/login.png)
+### 📤 Detection in Progress
+<img src="images/detection.png" alt="Detection In Progress" width="800"/>
 
-### Google Sign-In
-OAuth login flow via Google.
+### ✅ Detection Result
+<img src="images/aniamaldetected.png" alt="Animal Detected" width="800"/>
 
-![Google Sign-In](images/googleLogin.png)
+### 🎵 Audio Detection
+<img src="images/audio.png" alt="Audio Detection" width="800"/>
 
-### Detection in Progress
-Upload and detection workflow.
+### 🕒 History Log
+<img src="images/history.png" alt="History Log" width="800"/>
 
-![Detection](images/detection.png)
+### 📚 Species Library
+<img src="images/species.png" alt="Species Library" width="800"/>
 
-### Detection Result
-Annotated result showing detected species.
-
-![Animal Detected](images/aniamaldetected.png)
-
-### Audio Detection
-Interface for uploading and classifying wildlife sounds.
-
-![Audio Detection](images/audio.png)
-
-### History Log
-Log of previous detections per user.
-
-![History Log](images/history.png)
-
-### Species Library
-Reference page listing detectable species.
-
-![Species Library](images/species.png)
+</div>
 
 ---
 
@@ -340,12 +349,18 @@ FastAPI provides automatic interactive API documentation once the server is runn
 
 ## 📄 License
 
-Specify your project's license here (e.g., MIT, Apache 2.0). If unsure, add a `LICENSE` file to the repository root and reference it here.
+<div align="center">
+
+Distributed under the **MIT License**. See `LICENSE` for more information.
+
+</div>
 
 ---
 
+<div align="center">
+
 ## 🙏 Acknowledgements
 
-- [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) for the image detection model architecture.
-- [TensorFlow/Keras](https://www.tensorflow.org/) for audio classification.
-- [FastAPI](https://fastapi.tiangolo.com/) for the backend framework.
+[Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) • [TensorFlow/Keras](https://www.tensorflow.org/) • [FastAPI](https://fastapi.tiangolo.com/)
+
+</div>
