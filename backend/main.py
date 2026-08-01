@@ -26,17 +26,20 @@ app.add_middleware(
 # Load the model. The best.pt file is in the parent directory (project root)
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "best.pt")
 AUDIO_MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "audio_model_v2_77.keras")
+NEW_AUDIO_MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "AnimalSoundModel.keras")
 LABEL_ENCODER_PATH = os.path.join(os.path.dirname(__file__), "..", "label_encoder_v2.pkl")
 
 # Global variable to hold the model
 model = None
 audio_model = None
+new_audio_model = None
 label_encoder = None
 
 @app.on_event("startup")
 def load_model():
     global model
     global audio_model
+    global new_audio_model
     global label_encoder
     
     if os.path.exists(MODEL_PATH):
@@ -50,6 +53,15 @@ def load_model():
         print(f"Audio model loaded from {AUDIO_MODEL_PATH}")
     else:
         print(f"Error: Audio model not found at {AUDIO_MODEL_PATH}")
+        
+    if os.path.exists(NEW_AUDIO_MODEL_PATH):
+        try:
+            new_audio_model = tf.keras.models.load_model(NEW_AUDIO_MODEL_PATH)
+            print(f"New audio model loaded from {NEW_AUDIO_MODEL_PATH}")
+        except Exception as e:
+            print(f"Error loading new audio model: {e}")
+    else:
+        print(f"Warning: New audio model not found at {NEW_AUDIO_MODEL_PATH}")
         
     if os.path.exists(LABEL_ENCODER_PATH):
         with open(LABEL_ENCODER_PATH, "rb") as f:
@@ -194,7 +206,23 @@ async def predict_audio(file: UploadFile = File(...)):
         input_data = np.expand_dims(spectrogram_img, axis=0)
 
         # Predict
-        prediction = audio_model.predict(input_data)
+        prediction1 = audio_model.predict(input_data)
+        
+        if new_audio_model is not None:
+            prediction2 = new_audio_model.predict(input_data)
+            # Map the 13 classes to the 35 classes
+            # --- TODO: UPDATE THIS MAPPING ---
+            # Key: class index in the 13-class model
+            # Value: corresponding class index in the 35-class model
+            CLASS_MAPPING_13_TO_35 = {i: i for i in range(13)}
+            
+            mapped_prediction2 = np.zeros_like(prediction1)
+            for idx_13, idx_35 in CLASS_MAPPING_13_TO_35.items():
+                mapped_prediction2[0, idx_35] = prediction2[0, idx_13]
+                
+            prediction = (prediction1 + mapped_prediction2) / 2
+        else:
+            prediction = prediction1
 
         # Get the predicted class index
         predicted_class_index = np.argmax(prediction, axis=1)
@@ -261,7 +289,19 @@ async def predict_single_species(species_name: str, file: UploadFile = File(...)
 
         # Reshape to (1, 224, 224, 3)
         input_data = np.expand_dims(spectrogram_img, axis=0)
-        prediction = audio_model.predict(input_data)
+        prediction1 = audio_model.predict(input_data)
+        
+        if new_audio_model is not None:
+            prediction2 = new_audio_model.predict(input_data)
+            CLASS_MAPPING_13_TO_35 = {i: i for i in range(13)}
+            
+            mapped_prediction2 = np.zeros_like(prediction1)
+            for idx_13, idx_35 in CLASS_MAPPING_13_TO_35.items():
+                mapped_prediction2[0, idx_35] = prediction2[0, idx_13]
+                
+            prediction = (prediction1 + mapped_prediction2) / 2
+        else:
+            prediction = prediction1
 
         # Get probability for target species
         species_idx = supported_classes.index(target_class)
