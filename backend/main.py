@@ -1,6 +1,7 @@
 import io
 import os
 import pickle
+import threading
 import numpy as np
 import librosa
 import tensorflow as tf
@@ -34,55 +35,73 @@ model = None
 audio_model = None
 new_audio_model = None
 label_encoder = None
+model_loading = False
+model_load_error = None
 
-@app.on_event("startup")
 def load_model():
     global model
     global audio_model
     global new_audio_model
     global label_encoder
-    
-    if os.path.exists(MODEL_PATH):
-        model = YOLO(MODEL_PATH)
-        print(f"Model loaded from {MODEL_PATH}")
-    else:
-        print(f"Error: Model not found at {MODEL_PATH}")
-        
-    if os.path.exists(AUDIO_MODEL_PATH):
-        audio_model = tf.keras.models.load_model(AUDIO_MODEL_PATH)
-        print(f"Audio model loaded from {AUDIO_MODEL_PATH}")
-    else:
-        print(f"Error: Audio model not found at {AUDIO_MODEL_PATH}")
-        
-    if os.path.exists(NEW_AUDIO_MODEL_PATH):
-        try:
-            new_audio_model = tf.keras.models.load_model(NEW_AUDIO_MODEL_PATH)
-            print(f"New audio model loaded from {NEW_AUDIO_MODEL_PATH}")
-        except Exception as e:
-            print(f"Error loading new audio model: {e}")
-    else:
-        print(f"Warning: New audio model not found at {NEW_AUDIO_MODEL_PATH}")
-        
-    if os.path.exists(LABEL_ENCODER_PATH):
-        with open(LABEL_ENCODER_PATH, "rb") as f:
-            label_encoder = pickle.load(f)
-        print(f"Label encoder loaded from {LABEL_ENCODER_PATH}")
-    else:
-        print(f"Error: Label encoder not found at {LABEL_ENCODER_PATH}")
+    global model_loading
+    global model_load_error
+
+    try:
+        if os.path.exists(MODEL_PATH):
+            model = YOLO(MODEL_PATH)
+            print(f"Model loaded from {MODEL_PATH}")
+        else:
+            print(f"Error: Model not found at {MODEL_PATH}")
+
+        if os.path.exists(AUDIO_MODEL_PATH):
+            audio_model = tf.keras.models.load_model(AUDIO_MODEL_PATH)
+            print(f"Audio model loaded from {AUDIO_MODEL_PATH}")
+        else:
+            print(f"Error: Audio model not found at {AUDIO_MODEL_PATH}")
+
+        if os.path.exists(NEW_AUDIO_MODEL_PATH):
+            try:
+                new_audio_model = tf.keras.models.load_model(NEW_AUDIO_MODEL_PATH)
+                print(f"New audio model loaded from {NEW_AUDIO_MODEL_PATH}")
+            except Exception as e:
+                print(f"Error loading new audio model: {e}")
+        else:
+            print(f"Warning: New audio model not found at {NEW_AUDIO_MODEL_PATH}")
+
+        if os.path.exists(LABEL_ENCODER_PATH):
+            with open(LABEL_ENCODER_PATH, "rb") as f:
+                label_encoder = pickle.load(f)
+            print(f"Label encoder loaded from {LABEL_ENCODER_PATH}")
+        else:
+            print(f"Error: Label encoder not found at {LABEL_ENCODER_PATH}")
+    except Exception as e:
+        model_load_error = str(e)
+        print(f"Error loading inference assets: {e}")
+    finally:
+        model_loading = False
+
+
+@app.on_event("startup")
+def begin_model_loading():
+    """Bind the web port first; model loading can take several minutes on CPU hosts."""
+    global model_loading
+    model_loading = True
+    threading.Thread(target=load_model, name="model-loader", daemon=True).start()
 
 
 @app.get("/healthz")
 def health_check():
-    """Deployment health check that reports whether required inference assets loaded."""
+    """Liveness check for the host; the body reports inference readiness."""
     ready = model is not None and audio_model is not None and label_encoder is not None
     return JSONResponse(
-        status_code=200 if ready else 503,
+        status_code=200,
         content={
-            "status": "ready" if ready else "degraded",
+            "status": "ready" if ready else ("loading" if model_loading else "degraded"),
             "object_model": model is not None,
             "audio_model": audio_model is not None,
             "ensemble_audio_model": new_audio_model is not None,
-            "label_encoder": label_encoder is not None
+            "label_encoder": label_encoder is not None,
+            "error": model_load_error
         }
     )
 
