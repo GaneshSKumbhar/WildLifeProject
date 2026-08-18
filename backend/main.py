@@ -2,15 +2,11 @@ import io
 import os
 import pickle
 import threading
-import numpy as np
-import librosa
-import tensorflow as tf
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
-from ultralytics import YOLO
 
 app = FastAPI(title="Wildlife Object Detection API",
               description="API for detecting wildlife species using YOLOv8.")
@@ -38,6 +34,13 @@ label_encoder = None
 model_loading = False
 model_load_error = None
 
+# Heavy ML libraries are imported by the background loader so the web server
+# can bind to its cloud-assigned port before TensorFlow/PyTorch initialise.
+np = None
+librosa = None
+tf = None
+YOLO = None
+
 def load_model():
     global model
     global audio_model
@@ -45,8 +48,23 @@ def load_model():
     global label_encoder
     global model_loading
     global model_load_error
+    global np
+    global librosa
+    global tf
+    global YOLO
 
     try:
+        print("Loading inference libraries in background...")
+        import numpy as numpy_module
+        import librosa as librosa_module
+        import tensorflow as tensorflow_module
+        from ultralytics import YOLO as yolo_model
+
+        np = numpy_module
+        librosa = librosa_module
+        tf = tensorflow_module
+        YOLO = yolo_model
+
         if os.path.exists(MODEL_PATH):
             model = YOLO(MODEL_PATH)
             print(f"Model loaded from {MODEL_PATH}")
