@@ -70,6 +70,22 @@ def load_model():
     else:
         print(f"Error: Label encoder not found at {LABEL_ENCODER_PATH}")
 
+
+@app.get("/healthz")
+def health_check():
+    """Deployment health check that reports whether required inference assets loaded."""
+    ready = model is not None and audio_model is not None and label_encoder is not None
+    return JSONResponse(
+        status_code=200 if ready else 503,
+        content={
+            "status": "ready" if ready else "degraded",
+            "object_model": model is not None,
+            "audio_model": audio_model is not None,
+            "ensemble_audio_model": new_audio_model is not None,
+            "label_encoder": label_encoder is not None
+        }
+    )
+
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
     if model is None:

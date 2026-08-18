@@ -1,0 +1,17 @@
+.git
+.github
+.venv
+venv
+env
+ENV
+__pycache__
+**/__pycache__
+*.py[cod]
+.env
+.DS_Store
+Thumbs.db
+.ipynb_checkpoints
+best_audio_model.keras
+best_audio_model_v2.keras
+best_audio_model_v3.keras
+final_audio_classifier.keras
