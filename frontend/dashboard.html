@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — EcoSentinel</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
+</head>
+<body>
+    <div id="shell-root"></div>
+
+    <!-- Firebase CDN (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+    <script src="population-insights.js"></script>
+
+    <script>
+        (async function () {
+            var session = await WI.renderShell('dashboard', 'CONSERVATION DASHBOARD');
+            var insights = window.PopulationInsights;
+
+            document.getElementById('page-slot').innerHTML = `
+                <main class="page dashboard-page">
+                    <div class="page-head dashboard-head">
+                        <div>
+                            <div class="eyebrow">LIVE FIELD INTELLIGENCE</div>
+                            <h1>Welcome back, <span id="dashboard-user">Researcher</span>.</h1>
+                            <p>Track wildlife observations, population activity, and the latest records flowing in from the field.</p>
+                        </div>
+                        <button class="btn btn-ghost dashboard-refresh" id="dashboard-refresh" type="button">
+                            <span class="spinner"></span><span class="label">Refresh data</span>
+                        </button>
+                    </div>
+
+                    <section class="metric-card-grid" aria-label="Population summary">
+                        <article class="metric-card card">
+                            <div class="metric-icon metric-icon-gold">◌</div>
+                            <div><div class="metric-label">Recorded population</div><div class="metric-value" id="metric-population">—</div><div class="metric-detail" id="metric-population-detail">Loading observations…</div></div>
+                        </article>
+                        <article class="metric-card card">
+                            <div class="metric-icon metric-icon-green">✦</div>
+                            <div><div class="metric-label">Species observed</div><div class="metric-value" id="metric-species">—</div><div class="metric-detail" id="metric-species-detail">Loading observations…</div></div>
+                        </article>
+                        <article class="metric-card card">
+                            <div class="metric-icon metric-icon-blue">⌖</div>
+                            <div><div class="metric-label">Active locations</div><div class="metric-value" id="metric-locations">—</div><div class="metric-detail" id="metric-locations-detail">Loading observations…</div></div>
+                        </article>
+                        <article class="metric-card card">
+                            <div class="metric-icon metric-icon-moss">↗</div>
+                            <div><div class="metric-label">7-day activity</div><div class="metric-value" id="metric-activity">—</div><div class="metric-detail" id="metric-activity-detail">Loading observations…</div></div>
+                        </article>
+                    </section>
+
+                    <section class="dashboard-analysis-grid">
+                        <article class="card trend-card">
+                            <div class="card-head"><div><h3>Population activity</h3><p class="card-subtitle">Observed individuals over the last 14 days</p></div><span class="count">14 DAYS</span></div>
+                            <div class="card-body"><div id="dashboard-trend" class="chart-panel"><div class="insight-empty">Loading activity trend…</div></div></div>
+                        </article>
+                        <aside class="card dashboard-insight-card">
+                            <div class="card-head"><h3>Field insight</h3><span class="count">LIVE</span></div>
+                            <div class="card-body" id="dashboard-insight"><div class="insight-empty">Preparing a data-driven insight…</div></div>
+                        </aside>
+                    </section>
+
+                    <section class="dashboard-analysis-grid dashboard-bottom-grid">
+                        <article class="card">
+                            <div class="card-head"><div><h3>Most observed species</h3><p class="card-subtitle">By recorded population</p></div><a class="text-link" href="population.html">View analytics</a></div>
+                            <div class="card-body"><div id="dashboard-species" class="bar-list"><div class="insight-empty">Loading species distribution…</div></div></div>
+                        </article>
+                        <article class="card">
+                            <div class="card-head"><div><h3>Recent field activity</h3><p class="card-subtitle">Latest saved population observations</p></div><a class="text-link" href="log.html">View logs</a></div>
+                            <div class="card-body recent-list" id="dashboard-recent"><div class="insight-empty">Loading recent observations…</div></div>
+                        </article>
+                    </section>
+
+                    <section class="dashboard-actions" aria-label="Quick actions">
+                        <a class="quick-action card" href="detection.html"><span class="quick-action-icon">◈</span><span><strong>Run object detection</strong><small>Analyse an image from the field.</small></span><span aria-hidden="true">→</span></a>
+                        <a class="quick-action card" href="audio.html"><span class="quick-action-icon">⌁</span><span><strong>Classify an audio clip</strong><small>Identify a species from bioacoustics.</small></span><span aria-hidden="true">→</span></a>
+                        <a class="quick-action card" href="population.html"><span class="quick-action-icon">↗</span><span><strong>Explore population analytics</strong><small>Compare species, sites, and trends.</small></span><span aria-hidden="true">→</span></a>
+                    </section>
+                </main>
+            `;
+
+            var profileName = (session.profile && session.profile.name) || session.user.displayName || session.user.email || 'Researcher';
+            document.getElementById('dashboard-user').textContent = profileName.split(' ')[0];
+            var refreshButton = document.getElementById('dashboard-refresh');
+
+            function setText(id, value) { document.getElementById(id).textContent = value; }
+
+            function renderInsight(records, species, activity) {
+                var target = document.getElementById('dashboard-insight');
+                if (!records.length) {
+                    target.innerHTML = '<div class="insight-callout"><span class="insight-status">READY FOR FIELD DATA</span><h4>Your dashboard will populate as soon as you save a detection or audio classification.</h4><p>Each saved result is recorded as a population observation and becomes available here automatically.</p><a class="btn btn-primary" href="detection.html">Add first observation</a></div>';
+                    return;
+                }
+
+                var lead = species[0];
+                var directionText = activity.direction === 'up' ? 'increased' : (activity.direction === 'down' ? 'decreased' : 'held steady');
+                var comparison = activity.percent === null
+                    ? 'This is the first observed activity in the last seven days.'
+                    : (Math.abs(activity.percent).toFixed(0) + '% compared with the preceding seven days.');
+                target.innerHTML = '<div class="insight-callout">' +
+                    '<span class="insight-status">POPULATION SIGNAL</span>' +
+                    '<h4>' + insights.escapeHtml(lead.label) + ' is the most frequently recorded species.</h4>' +
+                    '<p>' + insights.formatNumber(lead.count) + ' individuals recorded across ' + insights.formatNumber(lead.records) + ' observation' + (lead.records === 1 ? '' : 's') + '. Activity has ' + directionText + ' ' + comparison + '</p>' +
+                    '<a class="text-link" href="population.html">Open population analytics →</a>' +
+                    '</div>';
+            }
+
+            function renderRecent(records) {
+                var target = document.getElementById('dashboard-recent');
+                if (!records.length) {
+                    target.innerHTML = '<div class="insight-empty">No population observations have been saved yet.</div>';
+                    return;
+                }
+                target.innerHTML = records.slice(0, 5).map(function (record) {
+                    return '<div class="recent-item">' +
+                        '<div class="recent-marker recent-marker-' + record.source.toLowerCase() + '"></div>' +
+                        '<div class="recent-copy"><strong>' + insights.escapeHtml(record.displaySpecies) + '</strong><span>' + insights.escapeHtml(record.location) + ' · ' + insights.escapeHtml(record.source) + '</span></div>' +
+                        '<div class="recent-meta"><strong>' + insights.formatNumber(record.count) + '</strong><span>' + insights.escapeHtml(insights.relativeTime(record.observedAt)) + '</span></div>' +
+                        '</div>';
+                }).join('');
+            }
+
+            function render(records) {
+                var totalPopulation = insights.sum(records);
+                var species = insights.aggregate(records, 'displaySpecies');
+                var locations = insights.aggregate(records, 'location');
+                var activity = insights.changeForPeriod(records, 7);
+                var latest = records[0];
+
+                setText('metric-population', insights.formatNumber(totalPopulation));
+                setText('metric-population-detail', records.length + ' saved observation' + (records.length === 1 ? '' : 's'));
+                setText('metric-species', insights.formatNumber(species.length));
+                setText('metric-species-detail', species.length ? 'Most observed: ' + species[0].label : 'No species recorded yet');
+                setText('metric-locations', insights.formatNumber(locations.length));
+                setText('metric-locations-detail', latest ? 'Latest: ' + insights.relativeTime(latest.observedAt) : 'No field sites recorded yet');
+                setText('metric-activity', insights.formatNumber(activity.current));
+                if (activity.percent === null) setText('metric-activity-detail', activity.current ? 'First activity this week' : 'No observations this week');
+                else setText('metric-activity-detail', (activity.percent >= 0 ? '+' : '') + activity.percent.toFixed(0) + '% vs. previous week');
+
+                insights.renderLineChart(document.getElementById('dashboard-trend'), insights.dailySeries(records, 14), 'individuals');
+                insights.renderBars(document.getElementById('dashboard-species'), species, { limit: 5, emptyText: 'No species distribution is available yet.' });
+                renderInsight(records, species, activity);
+                renderRecent(records);
+            }
+
+            async function refresh() {
+                refreshButton.classList.add('loading');
+                refreshButton.disabled = true;
+                try {
+                    render(await insights.load(500));
+                } catch (error) {
+                    console.error('Dashboard data failed to load:', error);
+                    document.getElementById('dashboard-insight').innerHTML = '<div class="insight-empty insight-error">Unable to load population observations. Check your Firestore connection and try again.</div>';
+                    document.getElementById('dashboard-trend').innerHTML = '<div class="insight-empty insight-error">Population data is currently unavailable.</div>';
+                } finally {
+                    refreshButton.classList.remove('loading');
+                    refreshButton.disabled = false;
+                }
+            }
+
+            refreshButton.addEventListener('click', refresh);
+            refresh();
+        })();
+    </script>
+</body>
+</html>

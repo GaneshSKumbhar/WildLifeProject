@@ -132,7 +132,7 @@
                 await FireAuth.signUp(email, password, name, selectedRole);
                 // Seed species on first registration (no-op if already seeded)
                 FireDB.seedSpecies();
-                window.location.href = 'detection.html';
+                window.location.href = 'dashboard.html';
             } catch (err) {
                 showError(FireAuth.friendlyError(err.code));
             } finally {
@@ -143,7 +143,7 @@
 
         // If already logged in, skip to console
         FireAuth.onAuthChange(function(user) {
-            if (user) window.location.href = 'detection.html';
+            if (user) window.location.href = 'dashboard.html';
         });
 
         async function handleGoogleLogin() {
@@ -152,7 +152,7 @@
                 await FireAuth.signInWithGoogle();
                 // Seed species on first registration (no-op if already seeded)
                 FireDB.seedSpecies();
-                window.location.href = 'detection.html';
+                window.location.href = 'dashboard.html';
             } catch (err) {
                 if (err.code !== 'auth/popup-closed-by-user') {
                     showError(FireAuth.friendlyError(err.code));

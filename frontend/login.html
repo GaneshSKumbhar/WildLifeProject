@@ -128,7 +128,7 @@
 
             try {
                 await FireAuth.signIn(email, password);
-                window.location.href = 'detection.html';
+                window.location.href = 'dashboard.html';
             } catch (err) {
                 showError(FireAuth.friendlyError(err.code));
             } finally {
@@ -141,7 +141,7 @@
             hideError();
             try {
                 await FireAuth.signInWithGoogle();
-                window.location.href = 'detection.html';
+                window.location.href = 'dashboard.html';
             } catch (err) {
                 if (err.code !== 'auth/popup-closed-by-user') {
                     showError(FireAuth.friendlyError(err.code));
@@ -151,7 +151,7 @@
 
         // If already logged in, skip to console
         FireAuth.onAuthChange(function (user) {
-            if (user) window.location.href = 'detection.html';
+            if (user) window.location.href = 'dashboard.html';
         });
     </script>
 </body>

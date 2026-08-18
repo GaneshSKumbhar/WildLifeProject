@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Population Analytics — EcoSentinel</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
+</head>
+<body>
+    <div id="shell-root"></div>
+
+    <!-- Firebase CDN (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+    <script src="population-insights.js"></script>
+
+    <script>
+        (async function () {
+            await WI.renderShell('population', 'POPULATION ANALYTICS');
+            var insights = window.PopulationInsights;
+            var state = { allRecords: [], period: 30, tableRecords: [] };
+
+            document.getElementById('page-slot').innerHTML = `
+                <main class="page analytics-page">
+                    <div class="page-head analytics-head">
+                        <div>
+                            <div class="eyebrow">POPULATION INTELLIGENCE</div>
+                            <h1>Population analytics</h1>
+                            <p>Use saved image and bioacoustic observations to understand the species, locations, and field activity that need attention.</p>
+                        </div>
+                        <div class="period-control" role="group" aria-label="Analytics time period">
+                            <button type="button" class="period-button" data-period="7">7D</button>
+                            <button type="button" class="period-button active" data-period="30">30D</button>
+                            <button type="button" class="period-button" data-period="90">90D</button>
+                        </div>
+                    </div>
+
+                    <section class="metric-card-grid analytics-metrics" aria-label="Population statistics">
+                        <article class="metric-card card"><div class="metric-icon metric-icon-gold">◌</div><div><div class="metric-label">Population recorded</div><div class="metric-value" id="analytics-total">—</div><div class="metric-detail" id="analytics-total-detail">Loading observations…</div></div></article>
+                        <article class="metric-card card"><div class="metric-icon metric-icon-green">✦</div><div><div class="metric-label">Species richness</div><div class="metric-value" id="analytics-species">—</div><div class="metric-detail" id="analytics-species-detail">Loading observations…</div></div></article>
+                        <article class="metric-card card"><div class="metric-icon metric-icon-blue">⌖</div><div><div class="metric-label">Monitored locations</div><div class="metric-value" id="analytics-locations">—</div><div class="metric-detail" id="analytics-locations-detail">Loading observations…</div></div></article>
+                        <article class="metric-card card"><div class="metric-icon metric-icon-moss">↗</div><div><div class="metric-label">Change from prior period</div><div class="metric-value" id="analytics-change">—</div><div class="metric-detail" id="analytics-change-detail">Loading observations…</div></div></article>
+                    </section>
+
+                    <section class="analytics-chart-grid">
+                        <article class="card trend-card">
+                            <div class="card-head"><div><h3>Population over time</h3><p class="card-subtitle" id="trend-period-label">Last 30 days</p></div><span class="count" id="trend-total">—</span></div>
+                            <div class="card-body"><div id="population-trend" class="chart-panel"><div class="insight-empty">Loading population trend…</div></div></div>
+                        </article>
+                        <article class="card">
+                            <div class="card-head"><div><h3>Species distribution</h3><p class="card-subtitle">Highest recorded populations</p></div><span class="count" id="species-count">—</span></div>
+                            <div class="card-body"><div id="population-species" class="bar-list"><div class="insight-empty">Loading species distribution…</div></div></div>
+                        </article>
+                    </section>
+
+                    <section class="analytics-chart-grid analytics-locations-grid">
+                        <article class="card">
+                            <div class="card-head"><div><h3>Location coverage</h3><p class="card-subtitle">Population records by field site</p></div><span class="count" id="location-count">—</span></div>
+                            <div class="card-body"><div id="population-locations" class="bar-list"><div class="insight-empty">Loading location coverage…</div></div></div>
+                        </article>
+                        <aside class="card analytics-reading-card">
+                            <div class="card-head"><h3>Analyst reading</h3><span class="count">DATA-LED</span></div>
+                            <div class="card-body" id="analytics-reading"><div class="insight-empty">Calculating population signals…</div></div>
+                        </aside>
+                    </section>
+
+                    <section class="card observation-table-card">
+                        <div class="card-head analytics-table-head">
+                            <div><h3>Population observations</h3><p class="card-subtitle" id="table-period-label">Records saved in the last 30 days</p></div>
+                            <div class="analytics-table-actions">
+                                <input class="text-input mono analytics-search" id="analytics-search" type="search" placeholder="Search species or location" aria-label="Search species or location">
+                                <select class="analytics-select mono" id="analytics-species-filter" aria-label="Filter by species"><option value="">All species</option></select>
+                                <button class="btn btn-ghost analytics-export" id="analytics-export" type="button">Export CSV</button>
+                                <button class="btn btn-ghost analytics-export" id="analytics-refresh" type="button"><span class="spinner"></span><span class="label">Refresh</span></button>
+                            </div>
+                        </div>
+                        <div class="card-body table-body"><div class="log-table-container"><table class="log-table population-table"><thead><tr><th>Observation time</th><th>Species</th><th>Location</th><th>Source</th><th>Population</th></tr></thead><tbody id="population-table-body"><tr><td colspan="5" class="empty-state">Loading population observations…</td></tr></tbody></table></div></div>
+                    </section>
+                </main>
+            `;
+
+            var searchInput = document.getElementById('analytics-search');
+            var speciesFilter = document.getElementById('analytics-species-filter');
+            var tableBody = document.getElementById('population-table-body');
+            var refreshButton = document.getElementById('analytics-refresh');
+
+            function setText(id, value) { document.getElementById(id).textContent = value; }
+
+            function updateSpeciesFilter() {
+                var current = speciesFilter.value;
+                var species = insights.aggregate(state.allRecords, 'displaySpecies');
+                speciesFilter.innerHTML = '<option value="">All species</option>' + species.map(function (entry) {
+                    return '<option value="' + insights.escapeHtml(entry.label) + '">' + insights.escapeHtml(entry.label) + '</option>';
+                }).join('');
+                speciesFilter.value = species.some(function (entry) { return entry.label === current; }) ? current : '';
+            }
+
+            function renderReading(records, species, locations, change) {
+                var target = document.getElementById('analytics-reading');
+                if (!records.length) {
+                    target.innerHTML = '<div class="insight-callout"><span class="insight-status">NO DATA IN PERIOD</span><h4>There are no dated observations in this period.</h4><p>Save new image or audio results, or choose a wider period to start comparing populations.</p></div>';
+                    return;
+                }
+                var leadSpecies = species[0];
+                var leadLocation = locations[0];
+                var trend = change.direction === 'up' ? 'higher' : (change.direction === 'down' ? 'lower' : 'level');
+                var comparison = change.percent === null
+                    ? 'No preceding-period baseline is available yet.'
+                    : Math.abs(change.percent).toFixed(0) + '% ' + trend + ' than the preceding period.';
+                target.innerHTML = '<div class="insight-callout">' +
+                    '<span class="insight-status">PRIORITY SIGNAL</span>' +
+                    '<h4>' + insights.escapeHtml(leadSpecies.label) + ' leads the current observation mix.</h4>' +
+                    '<p>' + insights.formatNumber(leadSpecies.count) + ' individuals were recorded. ' + insights.escapeHtml(leadLocation.label) + ' is the most active site with ' + insights.formatNumber(leadLocation.count) + '. Overall activity is ' + comparison + '</p>' +
+                    '<a class="text-link" href="detection.html">Add field observation →</a>' +
+                    '</div>';
+            }
+
+            function tableRecords(periodRecords) {
+                var search = searchInput.value.toLowerCase().trim();
+                var selectedSpecies = speciesFilter.value;
+                return periodRecords.filter(function (record) {
+                    var matchesSearch = !search || record.displaySpecies.toLowerCase().includes(search) || record.location.toLowerCase().includes(search);
+                    var matchesSpecies = !selectedSpecies || record.displaySpecies === selectedSpecies;
+                    return matchesSearch && matchesSpecies;
+                });
+            }
+
+            function renderTable(records) {
+                state.tableRecords = records;
+                if (!records.length) {
+                    tableBody.innerHTML = '<tr><td colspan="5" class="empty-state">No population observations match this view.</td></tr>';
+                    return;
+                }
+                tableBody.innerHTML = records.map(function (record) {
+                    var sourceClass = record.source.toLowerCase();
+                    return '<tr>' +
+                        '<td class="mono table-date">' + insights.escapeHtml(insights.formatDateTime(record.observedAt)) + '</td>' +
+                        '<td class="table-species">' + insights.escapeHtml(record.displaySpecies) + '</td>' +
+                        '<td>' + insights.escapeHtml(record.location) + '</td>' +
+                        '<td><span class="log-badge ' + (sourceClass === 'image' ? 'detection' : 'audio') + '">' + insights.escapeHtml(record.source) + '</span></td>' +
+                        '<td class="table-population">' + insights.formatNumber(record.count) + '</td>' +
+                        '</tr>';
+                }).join('');
+            }
+
+            function render() {
+                var periodRecords = insights.filterPeriod(state.allRecords, state.period);
+                var total = insights.sum(periodRecords);
+                var species = insights.aggregate(periodRecords, 'displaySpecies');
+                var locations = insights.aggregate(periodRecords, 'location');
+                var change = insights.changeForPeriod(state.allRecords, state.period);
+                var changeText = change.percent === null ? 'New' : (change.percent >= 0 ? '+' : '') + change.percent.toFixed(0) + '%';
+
+                setText('analytics-total', insights.formatNumber(total));
+                setText('analytics-total-detail', periodRecords.length + ' saved observation' + (periodRecords.length === 1 ? '' : 's') + ' in selected period');
+                setText('analytics-species', insights.formatNumber(species.length));
+                setText('analytics-species-detail', species.length ? 'Most observed: ' + species[0].label : 'No species recorded');
+                setText('analytics-locations', insights.formatNumber(locations.length));
+                setText('analytics-locations-detail', locations.length ? 'Most active: ' + locations[0].label : 'No locations recorded');
+                setText('analytics-change', changeText);
+                setText('analytics-change-detail', change.percent === null ? (change.current ? 'No prior-period baseline' : 'No data in selected period') : insights.formatNumber(Math.abs(change.current - change.previous)) + ' individual difference');
+                setText('trend-period-label', 'Last ' + state.period + ' days');
+                setText('table-period-label', 'Records saved in the last ' + state.period + ' days');
+                setText('trend-total', insights.formatNumber(total) + ' TOTAL');
+                setText('species-count', insights.formatNumber(species.length) + ' SPECIES');
+                setText('location-count', insights.formatNumber(locations.length) + ' SITES');
+
+                insights.renderLineChart(document.getElementById('population-trend'), insights.dailySeries(state.allRecords, state.period), 'individuals');
+                insights.renderBars(document.getElementById('population-species'), species, { limit: 6, emptyText: 'No species were recorded in this period.' });
+                insights.renderBars(document.getElementById('population-locations'), locations, { limit: 6, emptyText: 'No locations were recorded in this period.' });
+                renderReading(periodRecords, species, locations, change);
+                renderTable(tableRecords(periodRecords));
+            }
+
+            function csvCell(value) { return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"'; }
+
+            function exportCsv() {
+                if (!state.tableRecords.length) { WI.toast('No observations in the current view to export'); return; }
+                var rows = [['Observation time', 'Species', 'Location', 'Source', 'Population']];
+                state.tableRecords.forEach(function (record) {
+                    rows.push([insights.formatDateTime(record.observedAt), record.displaySpecies, record.location, record.source, record.count]);
+                });
+                var csv = rows.map(function (row) { return row.map(csvCell).join(','); }).join('\n');
+                var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                var url = URL.createObjectURL(blob);
+                var link = document.createElement('a');
+                link.href = url;
+                link.download = 'ecosentinel_population_' + new Date().toISOString().slice(0, 10) + '.csv';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+                WI.toast('Population CSV downloaded');
+            }
+
+            async function refresh() {
+                refreshButton.classList.add('loading');
+                refreshButton.disabled = true;
+                try {
+                    state.allRecords = await insights.load(500);
+                    updateSpeciesFilter();
+                    render();
+                } catch (error) {
+                    console.error('Population analytics failed to load:', error);
+                    tableBody.innerHTML = '<tr><td colspan="5" class="empty-state" style="color:var(--accent-crimson)">Unable to load population data. Check Firestore access and refresh.</td></tr>';
+                    document.getElementById('analytics-reading').innerHTML = '<div class="insight-empty insight-error">Population analytics could not connect to Firestore.</div>';
+                } finally {
+                    refreshButton.classList.remove('loading');
+                    refreshButton.disabled = false;
+                }
+            }
+
+            document.querySelectorAll('.period-button').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    state.period = Number(button.dataset.period);
+                    document.querySelectorAll('.period-button').forEach(function (item) {
+                        var active = item === button;
+                        item.classList.toggle('active', active);
+                        item.setAttribute('aria-pressed', String(active));
+                    });
+                    render();
+                });
+            });
+            searchInput.addEventListener('input', render);
+            speciesFilter.addEventListener('change', render);
+            document.getElementById('analytics-export').addEventListener('click', exportCsv);
+            refreshButton.addEventListener('click', refresh);
+            refresh();
+        })();
+    </script>
+</body>
+</html>

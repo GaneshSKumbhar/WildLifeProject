@@ -114,14 +114,16 @@
             root.innerHTML = `
                 <div class="yt-loader"></div>
                 <div class="sidebar">
-                    <a href="index.html" class="sidebar-brand" style="text-decoration:none;">
+                    <a href="dashboard.html" class="sidebar-brand" style="text-decoration:none;">
                         <img src="logo.svg" alt="Logo" class="logo-img">
                         <span>EcoSentinel</span>
                     </a>
                     <nav class="sidebar-nav">
+                        <div class="nav-item ${activeTabId === 'dashboard' ? 'active' : ''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</div>
                         <div class="nav-item ${activeTabId === 'detection' ? 'active' : ''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Object Detection</div>
                         <div class="nav-item ${activeTabId === 'species' ? 'active' : ''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Species Detection</div>
                         <div class="nav-item ${activeTabId === 'audio' ? 'active' : ''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="20" r="3"/><circle cx="16" cy="18" r="3"/></svg>Bioacoustic</div>
+                        <div class="nav-item ${activeTabId === 'population' ? 'active' : ''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 2 5-6"/><circle cx="7" cy="15" r="1"/><circle cx="11" cy="11" r="1"/><circle cx="14" cy="13" r="1"/><circle cx="19" cy="7" r="1"/></svg>Population Analytics</div>
                         <div class="nav-item ${activeTabId === 'logs' ? 'active' : ''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Session Logs</div>
                     </nav>
                     <div class="sidebar-footer">
@@ -160,11 +162,15 @@
             // Render sidebar and main wrapper
             root.innerHTML = `
                 <div class="sidebar">
-                    <a href="index.html" class="sidebar-brand" style="text-decoration:none;">
+                    <a href="dashboard.html" class="sidebar-brand" style="text-decoration:none;">
                         <img src="logo.svg" alt="Logo" class="logo-img">
                         <span>EcoSentinel</span>
                     </a>
                     <nav class="sidebar-nav">
+                        <div class="nav-item ${activeTabId === 'dashboard' ? 'active' : ''}" onclick="location.href='dashboard.html'">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                            Dashboard
+                        </div>
                         <div class="nav-item ${activeTabId === 'detection' ? 'active' : ''}" onclick="location.href='detection.html'">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                             Object Detection
@@ -176,6 +182,10 @@
                         <div class="nav-item ${activeTabId === 'audio' ? 'active' : ''}" onclick="location.href='audio.html'">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="20" r="3"/><circle cx="16" cy="18" r="3"/></svg>
                             Bioacoustic
+                        </div>
+                        <div class="nav-item ${activeTabId === 'population' ? 'active' : ''}" onclick="location.href='population.html'">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 2 5-6"/><circle cx="7" cy="15" r="1"/><circle cx="11" cy="11" r="1"/><circle cx="14" cy="13" r="1"/><circle cx="19" cy="7" r="1"/></svg>
+                            Population Analytics
                         </div>
                         <div class="nav-item ${activeTabId === 'logs' ? 'active' : ''}" onclick="location.href='log.html'">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
