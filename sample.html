@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>EcoSentinel | Wildlife Population Intelligence System</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&amp;family=Hanken+Grotesk:wght@300;400;600;800&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#0a2014",
+                        "on-error": "#690005",
+                        "primary-container": "#1a2f23",
+                        "tertiary-fixed": "#c9ead9",
+                        "tertiary-fixed-dim": "#adcebe",
+                        "secondary-fixed": "#ffddb2",
+                        "surface-container": "#1e201e",
+                        "surface": "#121412",
+                        "outline-variant": "#424843",
+                        "on-tertiary-container": "#7a998a",
+                        "surface-bright": "#383a37",
+                        "on-tertiary-fixed": "#022016",
+                        "on-secondary-container": "#e2b067",
+                        "on-primary-container": "#809787",
+                        "primary-fixed-dim": "#b4ccbb",
+                        "surface-variant": "#333533",
+                        "surface-dim": "#121412",
+                        "inverse-surface": "#e2e3df",
+                        "tertiary": "#adcebe",
+                        "tertiary-container": "#133025",
+                        "on-background": "#e2e3df",
+                        "secondary": "#f2be73",
+                        "on-primary": "#203529",
+                        "on-secondary": "#442b00",
+                        "inverse-primary": "#4d6355",
+                        "on-tertiary": "#19362b",
+                        "secondary-container": "#654200",
+                        "surface-tint": "#b4ccbb",
+                        "on-secondary-fixed-variant": "#624000",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-highest": "#333533",
+                        "surface-container-high": "#292a28",
+                        "background": "#121412",
+                        "on-tertiary-fixed-variant": "#304d40",
+                        "inverse-on-surface": "#2f312e",
+                        "on-secondary-fixed": "#291800",
+                        "secondary-fixed-dim": "#f2be73",
+                        "primary-fixed": "#d0e9d6",
+                        "outline": "#8c928c",
+                        "error-container": "#93000a",
+                        "primary": "#b4ccbb",
+                        "on-primary-fixed-variant": "#364c3e",
+                        "surface-container-low": "#1a1c1a",
+                        "error": "#ffb4ab",
+                        "on-surface": "#e2e3df",
+                        "surface-container-lowest": "#0d0f0d",
+                        "on-surface-variant": "#c2c8c2"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sm": "12px",
+                        "container-max": "1440px",
+                        "lg": "48px",
+                        "xs": "4px",
+                        "base": "8px",
+                        "gutter": "24px",
+                        "md": "24px",
+                        "xl": "80px"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Hanken Grotesk"],
+                        "label-mono": ["JetBrains Mono"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "display-lg": ["Libre Caslon Text"],
+                        "headline-lg-mobile": ["Libre Caslon Text"],
+                        "body-md": ["Hanken Grotesk"],
+                        "headline-lg": ["Libre Caslon Text"]
+                    },
+                    "fontSize": {
+                        "title-md": ["24px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "label-mono": ["12px", { "lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "display-lg": ["64px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["32px", { "lineHeight": "1.2", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg": ["40px", { "lineHeight": "1.2", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #121412;
+            color: #e2e3df;
+            scroll-behavior: smooth;
+        }
+
+        .glass-card {
+            background: rgba(26, 47, 35, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(45, 74, 62, 0.2);
+        }
+
+        .telemetry-corner {
+            position: absolute;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #f2be73;
+            pointer-events: none;
+        }
+
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: #f2be73;
+            transition: width 0.3s ease;
+        }
+
+        .nav-item:hover::after {
+            width: 100%;
+        }
+
+        @keyframes scan {
+            0% {
+                top: 0%;
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        .scanner-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #f2be73, transparent);
+            animation: scan 3s linear infinite;
+        }
+    </style>
+</head>
+
+<body class="font-body-md text-body-md overflow-x-hidden">
+    <!-- Shell: TopNavBar -->
+    <header
+        class="fixed top-0 left-0 right-0 z-50 bg-surface/80 backdrop-blur-md flex justify-between items-center w-full px-gutter h-16">
+        <div class="flex items-center gap-base">
+            <span class="material-symbols-outlined text-primary text-title-md"
+                style="font-variation-settings: 'FILL' 1;">eco</span>
+            <span class="font-title-md text-title-md text-primary tracking-tight">EcoSentinel</span>
+        </div>
+        <nav class="hidden md:flex items-center gap-lg">
+            <a class="font-label-mono text-label-mono text-on-surface-variant hover:text-secondary transition-opacity nav-item relative"
+                href="#objective">OBJECTIVE</a>
+            <a class="font-label-mono text-label-mono text-on-surface-variant hover:text-secondary transition-opacity nav-item relative"
+                href="#modules">MODULES</a>
+            <a class="font-label-mono text-label-mono text-on-surface-variant hover:text-secondary transition-opacity nav-item relative"
+                href="#impact">IMPACT</a>
+            <a class="px-base py-xs bg-secondary-container text-on-secondary-container border border-secondary/20 font-label-mono text-label-mono hover:bg-secondary hover:text-on-secondary transition-all"
+                href="#">LAUNCH CONSOLE</a>
+        </nav>
+        <div class="flex items-center gap-sm">
+            <span class="material-symbols-outlined text-outline cursor-pointer hover:text-primary">search</span>
+            <div
+                class="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center bg-surface-container overflow-hidden">
+                <img class="w-full h-full object-cover"
+                    data-alt="A professional headshot of a male researcher with dark hair, wearing a field vest, in a blurred background of a forest laboratory. The lighting is soft and focused, maintaining the dark green and amber aesthetic of the brand."
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuj3Ckigc9YfZmtVFWWVxnCHzwFREkc8kMl7R3JcnlO6jU5kRNicwvNcQnbYhy8deGaI_njpc71nanfzsMUHJA7XPO4fgFbDVUCoJGI7H35jG6poKBkLN-c1qMKVHqwbNQNf-vOYBDSJWq619x2Sk-vTW0R2XCHYeRxRsQ2oebSuoig10pV9w9pNTA9u-Hxj2MmgIwZY2mHXyoUwNmTt0Rrn3wCCF0thQQ23XBDMQD1sSh4e_q2iw7" />
+            </div>
+        </div>
+    </header>
+    <main class="pt-16">
+        <!-- Hero Section -->
+        <section class="relative min-h-[90vh] flex flex-col justify-center px-xl overflow-hidden">
+
+            <div class="relative z-10 max-w-4xl">
+                <div class="flex items-center gap-sm mb-md">
+                    <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                    <span class="font-label-mono text-label-mono text-secondary tracking-widest">AI &amp; COMPUTER
+                        VISION FOR BIODIVERSITY</span>
+                </div>
+                <h1 class="font-display-lg text-display-lg leading-none mb-base">
+                    Wildlife Population<br />
+                    <span class="italic text-primary-fixed-dim">Intelligence</span> System
+                </h1>
+                <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mb-lg">
+                    An AI-powered platform that turns camera trap images, drone imagery, satellite data, and field audio
+                    into species identification, population estimates, and habitat health scores — built for the people
+                    who protect what's left of the wild.
+                </p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-md border-t border-outline-variant pt-md">
+                    <div>
+                        <p class="font-label-mono text-label-mono text-outline mb-xs">MODULES</p>
+                        <p class="font-title-md text-title-md text-on-surface">14 engines</p>
+                    </div>
+                    <div>
+                        <p class="font-label-mono text-label-mono text-outline mb-xs">PROGRAMME</p>
+                        <p class="font-title-md text-title-md text-on-surface">8-week build</p>
+                    </div>
+                    <div>
+                        <p class="font-label-mono text-label-mono text-outline mb-xs">SPECIES GROUPS</p>
+                        <p class="font-title-md text-title-md text-on-surface">Mammals → Marine</p>
+                    </div>
+                    <div>
+                        <p class="font-label-mono text-label-mono text-outline mb-xs">DEPLOYMENT</p>
+                        <p class="font-title-md text-title-md text-on-surface">Docker · AWS / Azure</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Visual Telemetry Element -->
+            <div
+                class="absolute right-xl top-1/2 -translate-y-1/2 hidden lg:block w-[480px] h-[320px] rounded-lg border border-outline-variant overflow-hidden group">
+                <div class="scanner-line"></div>
+                <img class="w-full h-full object-cover grayscale brightness-75 transition-transform duration-700 group-hover:scale-110"
+                    data-alt="A high-contrast cinematic shot of a leopard prowling through dense forest at night, captured in infrared green and amber tones. Overlaid with subtle digital telemetry data, grid lines, and targeting brackets as if through a high-end computer vision interface."
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJnyxqcua0pTzGPRaCSAPzQtTcW0Z5wUz_sjg3-UuucdpX9EJ0HYRZqEjjQm6O9XGT_bzyHsyw6rIh-0JSqogFUfS9_JOw_wX0Y4P2kd7RSHlr_JATIT1R0nEW5q9oC51v_Ku4TwiuksDmHkm6z2ktioAPscfVH5aXj_DGoFLTchLS43MYFYzv5k5KIoizVmlizmrpmQ-kRV03_dUG1x_bS_-Dj8C0TixqiblRZOEQTepiv4hhtSXH" />
+                <div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
+                <div class="telemetry-corner top-4 left-4">CAM-014 · 03:42:11</div>
+                <div class="telemetry-corner bottom-4 left-4">Panthera pardus — 96.2% conf.</div>
+                <div class="absolute top-4 right-4 text-secondary">
+                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">target</span>
+                </div>
+            </div>
+        </section>
+        <!-- Objective Section -->
+        <section class="px-xl py-xl bg-surface-container-low" id="objective">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-lg items-center">
+                <div class="lg:col-span-5">
+                    <h2 class="font-label-mono text-label-mono text-secondary mb-base">THE OBJECTIVE</h2>
+                    <h3 class="font-headline-lg text-headline-lg mb-md">Quantifying the <span
+                            class="italic text-primary">Pulse of Nature</span></h3>
+                    <p class="text-on-surface-variant mb-md">
+                        Our objective is to build a unified intelligence layer for conservation. By integrating
+                        multi-modal data streams—from the acoustic chirps of rare birds to the thermal signatures of
+                        endangered rhinos—we provide researchers with actionable, real-time insights into ecosystem
+                        stability.
+                    </p>
+                    <ul class="space-y-sm">
+                        <li class="flex items-center gap-sm">
+                            <span class="material-symbols-outlined text-primary text-md">check_circle</span>
+                            <span class="font-label-mono text-label-mono uppercase">Automated Species
+                                Identification</span>
+                        </li>
+                        <li class="flex items-center gap-sm">
+                            <span class="material-symbols-outlined text-primary text-md">check_circle</span>
+                            <span class="font-label-mono text-label-mono uppercase">Habitat Degradation Analysis</span>
+                        </li>
+                        <li class="flex items-center gap-sm">
+                            <span class="material-symbols-outlined text-primary text-md">check_circle</span>
+                            <span class="font-label-mono text-label-mono uppercase">Anti-Poaching Predictive
+                                Modeling</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="lg:col-span-7 grid grid-cols-2 gap-md">
+                    <div
+                        class="glass-card p-md rounded-xl border border-outline-variant hover:border-secondary/50 transition-colors">
+                        <span class="material-symbols-outlined text-secondary mb-sm"
+                            style="font-size: 32px;">sensors</span>
+                        <h4 class="font-title-md text-title-md mb-xs text-on-surface">Data Ingestion</h4>
+                        <p class="text-on-tertiary-container text-sm">Seamlessly sync with IoT field devices, LoRaWAN
+                            networks, and satellite constellations.</p>
+                    </div>
+                    <div
+                        class="glass-card p-md rounded-xl border border-outline-variant hover:border-secondary/50 transition-colors mt-lg">
+                        <span class="material-symbols-outlined text-secondary mb-sm"
+                            style="font-size: 32px;">model_training</span>
+                        <h4 class="font-title-md text-title-md mb-xs text-on-surface">Neural Processing</h4>
+                        <p class="text-on-tertiary-container text-sm">Custom-trained vision transformers optimized for
+                            low-visibility and high-clutter environments.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Bento Grid Modules Section -->
+        <section class="px-xl py-xl" id="modules">
+            <div class="text-center mb-xl">
+                <h2 class="font-label-mono text-label-mono text-secondary mb-base">CORE ARCHITECTURE</h2>
+                <h3 class="font-headline-lg text-headline-lg">14 Intelligence Engines</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-md">
+                <!-- Large Featured Module -->
+                <div
+                    class="md:col-span-2 lg:row-span-2 relative rounded-2xl overflow-hidden glass-card p-lg flex flex-col justify-end group">
+                    <div class="absolute inset-0 z-0">
+                        <img class="w-full h-full object-cover opacity-30 transition-transform duration-1000 group-hover:scale-105"
+                            data-alt="A top-down satellite view of a lush rainforest with digital grid overlays and heat map signatures representing animal migration patterns. The colors are deep forest greens, teals, and amber hotspots, rendered with a professional data-visualisation aesthetic."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZD8embi9N1WJbJH_EVsaBhhBSxLRmpKwIVgxpUItkM3e3xiCKtgpoeTJkzmTI_3mUieUjpiw4hRrcnX2qVPWN9r74NUcGcywioX1h7nnzFtEgVof-d3-HN6109alG5NxC_Ko0mlcTHV_AyFNSF5bdO7OqaIA6S4RyI-eXNuHwqNSjsxeGdgNTA7fysoqZCGPAcy31ue238o1Oog3-a7OFwuxQPn9Jzl4xPaHGaFfKUpifIDT0Omzf" />
+                    </div>
+                    <div class="relative z-10">
+                        <div class="mb-sm flex items-center gap-base">
+                            <span class="material-symbols-outlined text-secondary">satellite_alt</span>
+                            <span class="font-label-mono text-label-mono text-secondary">MOD-01</span>
+                        </div>
+                        <h4 class="font-title-md text-title-md text-on-surface mb-base">Macro-Habitat Watch</h4>
+                        <p class="text-on-surface-variant max-w-sm mb-md">Utilizing Sentinel-2 and high-res commercial
+                            satellite data to monitor forest canopy change and illegal land encroachment in real-time.
+                        </p>
+                        <button
+                            class="flex items-center gap-xs font-label-mono text-label-mono text-primary hover:text-secondary transition-colors">
+                            VIEW DOCUMENTATION <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Species ID -->
+                <div
+                    class="glass-card rounded-2xl p-md border border-outline-variant flex flex-col justify-between hover:bg-primary-container transition-all">
+                    <span class="material-symbols-outlined text-primary" style="font-size: 40px;">visibility</span>
+                    <div>
+                        <h4 class="font-title-md text-title-md text-on-surface mb-xs">Species ID</h4>
+                        <p class="text-sm text-on-surface-variant">Classifies 2,000+ distinct species with 99.4%
+                            precision using edge-optimized vision models.</p>
+                    </div>
+                </div>
+                <!-- Acoustic Monitor -->
+                <div
+                    class="glass-card rounded-2xl p-md border border-outline-variant flex flex-col justify-between hover:bg-primary-container transition-all">
+                    <span class="material-symbols-outlined text-primary" style="font-size: 40px;">settings_voice</span>
+                    <div>
+                        <h4 class="font-title-md text-title-md text-on-surface mb-xs">Bioacoustics</h4>
+                        <p class="text-sm text-on-surface-variant">Isolates specific animal calls from complex forest
+                            soundscapes to map species presence in dense foliage.</p>
+                    </div>
+                </div>
+                <!-- Drone Telemetry -->
+                <div
+                    class="glass-card rounded-2xl p-md border border-outline-variant flex flex-col justify-between hover:bg-primary-container transition-all">
+                    <span class="material-symbols-outlined text-primary"
+                        style="font-size: 40px;">precision_manufacturing</span>
+                    <div>
+                        <h4 class="font-title-md text-title-md text-on-surface mb-xs">UAV Link</h4>
+                        <p class="text-sm text-on-surface-variant">Real-time object tracking and fleet management for
+                            autonomous conservation drones.</p>
+                    </div>
+                </div>
+                <!-- Analytics -->
+                <div
+                    class="glass-card rounded-2xl p-md border border-outline-variant flex flex-col justify-between hover:bg-primary-container transition-all">
+                    <span class="material-symbols-outlined text-primary" style="font-size: 40px;">analytics</span>
+                    <div>
+                        <h4 class="font-title-md text-title-md text-on-surface mb-xs">Population Stats</h4>
+                        <p class="text-sm text-on-surface-variant">Generates Markov Chain Monte Carlo estimations of
+                            population density and trends.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Impact Section -->
+        <section class="px-xl py-xl relative bg-surface-container-highest overflow-hidden" id="impact">
+
+            <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-xl">
+                <div>
+                    <h2 class="font-label-mono text-label-mono text-secondary mb-base">GLOBAL IMPACT</h2>
+                    <h3 class="font-headline-lg text-headline-lg mb-lg">Protecting Ecosystems<br /><span
+                            class="italic text-primary">Across Every Latitude</span></h3>
+                    <div class="space-y-lg">
+                        <div class="flex gap-md">
+                            <div
+                                class="w-12 h-12 shrink-0 flex items-center justify-center bg-secondary-container rounded-lg">
+                                <span class="font-title-md text-secondary">82%</span>
+                            </div>
+                            <div>
+                                <h4 class="font-title-md text-title-md text-on-surface mb-xs">Reduction in Data Latency
+                                </h4>
+                                <p class="text-on-surface-variant">From months to minutes. Researchers can now respond
+                                    to environmental threats while they are happening.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-md">
+                            <div
+                                class="w-12 h-12 shrink-0 flex items-center justify-center bg-secondary-container rounded-lg">
+                                <span class="font-title-md text-secondary">1.2M</span>
+                            </div>
+                            <div>
+                                <h4 class="font-title-md text-title-md text-on-surface mb-xs">Acreage Monitored</h4>
+                                <p class="text-on-surface-variant">Daily active surveillance across national parks in
+                                    Sub-Saharan Africa and Southeast Asia.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="relative min-h-[400px] rounded-2xl border border-outline-variant overflow-hidden shadow-2xl">
+                    <div
+                        class="absolute inset-0 bg-surface/40 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-lg text-center">
+                        <div
+                            class="w-20 h-20 rounded-full border border-secondary flex items-center justify-center mb-md group cursor-pointer hover:bg-secondary/10 transition-colors">
+                            <span class="material-symbols-outlined text-secondary text-headline-lg"
+                                style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                        </div>
+                        <p class="font-label-mono text-label-mono text-secondary">WATCH: THE SENTINEL PROJECT</p>
+                    </div>
+                    <img class="w-full h-full object-cover"
+                        data-alt="A cinematic misty morning shot of a dense, emerald-green jungle in the Congo Basin, with shafts of light piercing through the canopy. The image is rich in texture and atmosphere, styled like a National Geographic documentary still with a dark, sophisticated color grading."
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAT8FdeKeUI34m_8ZEYhSCfxqUsUeYD11MYScOZOmN-WMvAu-oMDtwq6uLYDSDBecHzhg-jzNJe9ghen9W-vNmgCd2CS9p5AReWPcaRFWxUNPC99zlxM1n8GhhcqR6jZQG6e_ucjFoanNdmEu7e2luyRQwR5B9gMGI1aAO9ZAt-i1n6Yt-2qU_dM_Lckjrupd0-HOstSQTO25stbeJU5ZRHeKXzwBrBqbF4CM-0JgBlKFs89MyYQDjb" />
+                </div>
+            </div>
+        </section>
+        <!-- Call to Action -->
+        <section class="px-xl py-xl text-center">
+            <div
+                class="max-w-3xl mx-auto py-xl border border-outline-variant bg-primary-container/20 rounded-3xl relative overflow-hidden">
+                <div class="absolute -top-24 -right-24 w-64 h-64 bg-secondary/5 rounded-full blur-3xl"></div>
+                <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+                <h3 class="font-headline-lg text-headline-lg mb-md">Ready to deploy the <span
+                        class="text-secondary italic">Sentinel?</span></h3>
+                <p class="text-on-surface-variant mb-lg max-w-lg mx-auto">Join a network of over 50 leading conservation
+                    organizations scaling their impact with Wildlife Intelligence.</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-md">
+                    <button
+                        class="bg-secondary text-on-secondary px-lg py-md rounded-lg font-title-md text-title-md font-extrabold hover:scale-105 active:scale-95 transition-all shadow-lg shadow-secondary/20">
+                        Launch Console
+                    </button>
+                    <button
+                        class="border border-outline text-on-surface px-lg py-md rounded-lg font-label-mono text-label-mono hover:bg-surface-variant/20 transition-all">
+                        REQUEST API ACCESS
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- Shell: Footer -->
+    <footer class="bg-surface-container-lowest border-t border-outline-variant py-base px-xl w-full">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-md">
+            <div class="flex items-center gap-base">
+                <span class="font-label-mono text-label-mono text-tertiary">© 2024 ECO-SENTINEL INTELLIGENCE.
+                    v4.2.0-STABLE</span>
+            </div>
+            <div class="flex gap-lg">
+                <a class="font-label-mono text-label-mono text-outline hover:text-primary transition-all"
+                    href="#">PRIVACY POLICY</a>
+                <a class="font-label-mono text-label-mono text-outline hover:text-primary transition-all" href="#">TERMS
+                    OF SERVICE</a>
+                <a class="font-label-mono text-label-mono text-outline hover:text-primary transition-all" href="#">API
+                    STATUS</a>
+            </div>
+            <div class="flex items-center gap-base text-tertiary">
+                <span class="material-symbols-outlined text-sm">public</span>
+                <span class="font-label-mono text-label-mono">NODES ONLINE: 1,204</span>
+            </div>
+        </div>
+    </footer>
+    <script>
+        // Smooth revealed scroll observer
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('opacity-100', 'translate-y-0');
+                    entry.target.classList.remove('opacity-0', 'translate-y-10');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('section').forEach(section => {
+            section.classList.add('transition-all', 'duration-1000', 'opacity-0', 'translate-y-10');
+            observer.observe(section);
+        });
+
+        // Telemetry Randomizer
+        setInterval(() => {
+            const confidence = (95 + Math.random() * 4).toFixed(1);
+            const telemetry = document.querySelector('.telemetry-corner.bottom-4');
+            if (telemetry) {
+                telemetry.innerText = `Panthera pardus — ${confidence}% conf.`;
+            }
+        }, 5000);
+    </script>
+</body>
+
+</html>

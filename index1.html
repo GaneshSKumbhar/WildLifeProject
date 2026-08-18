@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detection — Wildlife Intelligence</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id="shell-root"></div>
+
+  <script src="app.js"></script>
+  <script>
+    WI.renderShell('detection', 'DETECTION');
+    document.getElementById('page-slot').innerHTML = `
+    <div class="page">
+      <div class="page-head">
+        <div class="eyebrow">MOD-01 — /predict/ · /predict_image/</div>
+        <h1>Object Detection</h1>
+        <p>Upload a camera-trap frame. The console sends it to your YOLOv8 weights and returns species, confidence, and bounding boxes, alongside an annotated preview.</p>
+      </div>
+
+      <div class="cols-2">
+        <div class="card">
+          <div class="card-head"><h3>Frame input</h3></div>
+          <div class="card-body">
+            <div class="dropzone" id="dz">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16.5V19a2 2 0 002 2h12a2 2 0 002-2v-2.5M7 9l5-5 5 5M12 4v13"/></svg>
+              <div class="dz-title">Drop a trap image, or click to browse</div>
+              <div class="dz-sub">JPG · PNG · WEBP</div>
+              <input type="file" id="file-input" accept="image/*">
+            </div>
+            <div class="filebar" id="filebar" style="display:none;">
+              <span id="filebar-name"></span>
+              <span class="clear" id="filebar-clear">clear</span>
+            </div>
+
+            <div style="margin-top:16px;">
+              <label class="mono" style="font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.06em;">Site / camera ID (optional, for the log)</label>
+              <input type="text" class="text-input mono" id="site-input" placeholder="e.g. CAM-04-NORTH" style="margin-top:7px;">
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:16px;">
+              <button class="btn btn-primary btn-block" id="run-detect">
+                <span class="spinner"></span><span class="label" data-loading="Analyzing…">Run detection</span>
+              </button>
+              <button class="btn btn-ghost btn-block" id="run-annotated">
+                <span class="spinner"></span><span class="label" data-loading="Rendering…">Get annotated frame</span>
+              </button>
+            </div>
+            <div class="error-banner" id="err"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>Preview</h3><span class="count" id="preview-status">no frame loaded</span></div>
+          <div class="card-body">
+            <div class="tframe" id="tframe">
+              <div class="tf-media empty" id="tf-media">awaiting frame</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:24px;">
+        <div class="card-head">
+          <h3>Detections</h3>
+          <span class="count" id="det-count">0 objects</span>
+        </div>
+        <div class="card-body" id="results-body">
+          <div class="empty-state">Run detection on a frame to see species, confidence, and bounding boxes here.</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+    let currentFile = null;
+    let lastDetections = null;
+
+    const dz = document.getElementById('dz');
+    const fileInput = document.getElementById('file-input');
+    const filebar = document.getElementById('filebar');
+    const filebarName = document.getElementById('filebar-name');
+    const err = document.getElementById('err');
+    const tfMedia = document.getElementById('tf-media');
+    const tframe = document.getElementById('tframe');
+    const previewStatus = document.getElementById('preview-status');
+    const resultsBody = document.getElementById('results-body');
+    const detCount = document.getElementById('det-count');
+    const runDetectBtn = document.getElementById('run-detect');
+    const runAnnotatedBtn = document.getElementById('run-annotated');
+
+    dz.addEventListener('click', () => fileInput.click());
+    ['dragover', 'dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+    ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+    dz.addEventListener('drop', e => {
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', e => {
+      if (e.target.files && e.target.files[0]) setFile(e.target.files[0]);
+    });
+    document.getElementById('filebar-clear').addEventListener('click', () => setFile(null));
+
+    function setFile(file) {
+      currentFile = file;
+      WI.hideError(err);
+      if (!file) {
+        filebar.style.display = 'none';
+        fileInput.value = '';
+        tfMedia.outerHTML = '<div class="tf-media empty" id="tf-media">awaiting frame</div>';
+        previewStatus.textContent = 'no frame loaded';
+        resultsBody.innerHTML = '<div class="empty-state">Run detection on a frame to see species, confidence, and bounding boxes here.</div>';
+        detCount.textContent = '0 objects';
+        return;
+      }
+      filebar.style.display = 'flex';
+      filebarName.textContent = file.name + '  ·  ' + (file.size / 1024).toFixed(0) + ' KB';
+      const url = URL.createObjectURL(file);
+      document.getElementById('tf-media').outerHTML = `<img class="tf-media" id="tf-media" src="${url}">`;
+      previewStatus.textContent = 'raw frame';
+    }
+
+    runDetectBtn.addEventListener('click', async () => {
+      if (!currentFile) { WI.showError(err, 'Select an image first.'); return; }
+      setLoading(runDetectBtn, true);
+      WI.hideError(err);
+      try {
+        const fd = new FormData();
+        fd.append('file', currentFile);
+        const res = await fetch(WI.base() + '/predict/', { method: 'POST', body: fd });
+        if (!res.ok) throw new Error('server returned ' + res.status);
+        const data = await res.json();
+        renderResults(data);
+        WI.toast('Detection complete');
+      } catch (e) {
+        WI.showError(err, 'Detection failed: ' + e.message);
+      } finally {
+        setLoading(runDetectBtn, false);
+      }
+    });
+
+    runAnnotatedBtn.addEventListener('click', async () => {
+      if (!currentFile) { WI.showError(err, 'Select an image first.'); return; }
+      setLoading(runAnnotatedBtn, true);
+      WI.hideError(err);
+      try {
+        const fd = new FormData();
+        fd.append('file', currentFile);
+        const res = await fetch(WI.base() + '/predict_image/', { method: 'POST', body: fd });
+        if (!res.ok) throw new Error('server returned ' + res.status);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        document.getElementById('tf-media').outerHTML = `<img class="tf-media" id="tf-media" src="${url}">`;
+        previewStatus.textContent = 'annotated · from server';
+        WI.toast('Annotated frame received');
+      } catch (e) {
+        WI.showError(err, 'Annotated render failed: ' + e.message);
+      } finally {
+        setLoading(runAnnotatedBtn, false);
+      }
+    });
+
+    function setLoading(btn, on) {
+      btn.classList.toggle('loading', on);
+      btn.disabled = on;
+    }
+
+    function extractDetections(data) {
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.detections)) return data.detections;
+      if (data && Array.isArray(data.predictions)) return data.predictions;
+      if (data && Array.isArray(data.results)) return data.results;
+      if (data && typeof data === 'object') return [data];
+      return [];
+    }
+
+    function renderResults(data) {
+      lastDetections = extractDetections(data);
+      resultsBody.innerHTML = '';
+      detCount.textContent = lastDetections.length + (lastDetections.length === 1 ? ' object' : ' objects');
+
+      if (lastDetections.length === 0) {
+        resultsBody.innerHTML = '<div class="empty-state">No objects detected in this frame.</div>';
+        return;
+      }
+
+      const strip = document.createElement('div');
+      const top = lastDetections[0];
+      const label = top.class || top.label || top.species || top.name || 'object';
+      const confKey = Object.keys(top).find(k => /confidence|probability|score/i.test(k));
+      const confVal = confKey != null ? (top[confKey] <= 1 ? top[confKey] * 100 : top[confKey]) : null;
+      strip.className = 'headline-result';
+      strip.innerHTML = `
+      <div class="badge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5h4l2-2h6l2 2h4v13H3z"/><circle cx="12" cy="11.5" r="3.3"/></svg>
+      </div>
+      <div>
+        <h4 style="text-transform:capitalize;">${label}</h4>
+        <div class="sub">${lastDetections.length} object${lastDetections.length === 1 ? '' : 's'} · top-ranked${confVal != null ? ' · ' + confVal.toFixed(1) + '% confidence' : ''}</div>
+      </div>
+    `;
+      resultsBody.appendChild(strip);
+
+      lastDetections.forEach(obj => resultsBody.appendChild(WI.renderObjectCard(obj)));
+
+      const logBar = document.createElement('div');
+      logBar.style.marginTop = '16px';
+      logBar.innerHTML = `<button class="btn btn-ghost btn-block" id="log-btn">Log ${lastDetections.length} detection${lastDetections.length === 1 ? '' : 's'} to session</button>`;
+      resultsBody.appendChild(logBar);
+      document.getElementById('log-btn').addEventListener('click', logDetections);
+    }
+
+    function logDetections() {
+      const site = document.getElementById('site-input').value.trim() || null;
+      lastDetections.forEach(obj => {
+        const species = obj.class || obj.label || obj.species || obj.name || 'unknown';
+        const confKey = Object.keys(obj).find(k => /confidence|probability|score/i.test(k));
+        const confidence = confKey != null ? (obj[confKey] <= 1 ? obj[confKey] * 100 : obj[confKey]) : null;
+        WI.log.add({ kind: 'detection', species, count: 1, confidence, site, raw: obj });
+      });
+      WI.toast(lastDetections.length + ' record(s) added to session log');
+    }
+  </script>
+</body>
+
+</html>
